@@ -1,6 +1,4 @@
 // lib/data/whois.ts
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const whois = require('whois-json') as (domain: string) => Promise<Record<string, unknown>>;
 
 export type WhoisData = {
   createdAt: string | null;
@@ -10,6 +8,8 @@ export type WhoisData = {
 
 export async function fetchWhoisDomain(domain: string): Promise<WhoisData> {
   try {
+    const whoisModule = await import('whois-json');
+    const whois = whoisModule.default;
     const result = await whois(domain) as Record<string, unknown>;
 
     const createdRaw =
