@@ -40,6 +40,11 @@ export async function fetchNitterProfile(handle: string): Promise<NitterProfile>
     following: null, joinedRaw: null, accountAgeDays: null, tweetCount: null, isVerified: false,
   };
 
+  if (process.env.VERCEL) {
+    console.log('[nitter] skipped on Vercel — nitter blocked');
+    return empty;
+  }
+
   try {
     let res: Response | null = null;
     for (const base of NITTER_INSTANCES) {
