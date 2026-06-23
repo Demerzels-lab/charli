@@ -1,7 +1,7 @@
 // components/XVerdictCard.tsx
 'use client';
 
-import type { XAccountVerdict, DataSourceStatus } from '@/lib/types';
+import type { XAccountVerdict, DataSourceStatus, XDataSources } from '@/lib/types';
 
 const LEVEL_STYLES: Record<XAccountVerdict['level'], string> = {
   LEGIT: 'text-green-700 bg-green-50 border-green-200',
