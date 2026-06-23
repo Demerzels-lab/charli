@@ -1,7 +1,8 @@
 // lib/data/twitter-syndication.ts
-// Free, no-login Twitter profile data via the public guest-token GraphQL path.
-// This is the unauthenticated path used by logged-out web/embeds. Unlike the
-// syndication CDN (which 429s datacenter IPs), the guest path works from Vercel.
+// Free, no-login Twitter profile data via community embed proxies (fxtwitter / vxtwitter).
+// These are the proxies behind Discord/Telegram embeds — built to be hit from anywhere,
+// including datacenter IPs. Twitter's own endpoints (syndication, guest GraphQL) 429/block
+// cloud IPs; these proxies do not.
 
 export type TwitterProfile = {
   displayName: string | null;
@@ -23,114 +24,104 @@ export type TwitterFetchResult = {
   reason?: string;
 };
 
-// Public guest bearer token used by Twitter's own logged-out web client.
-const GUEST_BEARER =
-  'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
-
-const USER_QUERY_ID = 'G3KGOASz96M-Qu0nwmGXNg';
-
-const FEATURES = {
-  hidden_profile_likes_enabled: false,
-  responsive_web_graphql_exclude_directive_enabled: true,
-  verified_phone_label_enabled: false,
-  subscriptions_verification_info_is_identity_verified_enabled: false,
-  subscriptions_verification_info_verified_since_enabled: true,
-  highlights_tweets_tab_ui_enabled: true,
-  creator_subscriptions_tweet_preview_api_enabled: true,
-  responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
-  responsive_web_graphql_timeline_navigation_enabled: true,
-};
-
-type LegacyUser = {
-  name?: string;
-  screen_name?: string;
-  description?: string;
-  followers_count?: number;
-  friends_count?: number;
-  statuses_count?: number;
-  created_at?: string;
-  verified?: boolean;
-  profile_image_url_https?: string;
-};
-
-function ageDaysFrom(createdAt: string | undefined): number | null {
+function ageDaysFrom(createdAt: string | null | undefined): number | null {
   if (!createdAt) return null;
   const d = new Date(createdAt);
   if (isNaN(d.getTime())) return null;
   return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-async function getGuestToken(): Promise<string | null> {
-  try {
-    const res = await fetch('https://api.twitter.com/1.1/guest/activate.json', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${GUEST_BEARER}` },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return null;
-    const json = await res.json() as { guest_token?: string };
-    return json.guest_token ?? null;
-  } catch {
-    return null;
-  }
+const UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
+
+// --- fxtwitter: richest payload (joined + verification) ---
+type FxUser = {
+  screen_name?: string;
+  name?: string;
+  description?: string;
+  raw_description?: { text?: string };
+  followers?: number;
+  following?: number;
+  tweets?: number;
+  joined?: string;
+  verification?: { verified?: boolean; type?: string };
+  avatar_url?: string;
+};
+
+async function fetchFx(handle: string): Promise<TwitterProfile | null> {
+  const res = await fetch(`https://api.fxtwitter.com/${encodeURIComponent(handle)}`, {
+    headers: { 'User-Agent': UA, Accept: 'application/json' },
+    redirect: 'manual',
+    signal: AbortSignal.timeout(9000),
+  });
+  if (!res.ok) return null;
+  const json = await res.json() as { code?: number; user?: FxUser };
+  if (json.code !== 200 || !json.user?.screen_name) return null;
+  const u = json.user;
+  const verified = u.verification?.verified ?? false;
+  return {
+    displayName: u.name ?? null,
+    handle: u.screen_name ?? handle,
+    bio: u.raw_description?.text ?? u.description ?? null,
+    followers: u.followers ?? null,
+    following: u.following ?? null,
+    tweetCount: u.tweets ?? null,
+    createdAt: u.joined ?? null,
+    accountAgeDays: ageDaysFrom(u.joined),
+    isVerified: verified,
+    isBlueVerified: verified,
+    profileImageUrl: u.avatar_url ?? null,
+  };
+}
+
+// --- vxtwitter: fallback (has created_at, no verification) ---
+type VxUser = {
+  screen_name?: string;
+  name?: string;
+  description?: string;
+  followers_count?: number;
+  following_count?: number;
+  tweet_count?: number;
+  created_at?: string;
+  profile_image_url?: string;
+};
+
+async function fetchVx(handle: string): Promise<TwitterProfile | null> {
+  const res = await fetch(`https://api.vxtwitter.com/${encodeURIComponent(handle)}`, {
+    headers: { 'User-Agent': UA, Accept: 'application/json' },
+    redirect: 'manual',
+    signal: AbortSignal.timeout(9000),
+  });
+  if (!res.ok) return null;
+  const u = await res.json() as VxUser;
+  if (!u.screen_name) return null;
+  return {
+    displayName: u.name ?? null,
+    handle: u.screen_name ?? handle,
+    bio: u.description ?? null,
+    followers: u.followers_count ?? null,
+    following: u.following_count ?? null,
+    tweetCount: u.tweet_count ?? null,
+    createdAt: u.created_at ?? null,
+    accountAgeDays: ageDaysFrom(u.created_at),
+    isVerified: false,
+    isBlueVerified: false,
+    profileImageUrl: u.profile_image_url ?? null,
+  };
 }
 
 export async function fetchTwitterProfile(handle: string): Promise<TwitterFetchResult> {
   const cleanHandle = handle.replace(/^@/, '');
 
-  try {
-    const guestToken = await getGuestToken();
-    if (!guestToken) {
-      console.error(`[twitter-syndication] ${cleanHandle} → guest token failed`);
-      return { data: null, source: 'failed', reason: 'guest token activation failed' };
+  // Try fxtwitter (richest), fall back to vxtwitter.
+  for (const [name, fn] of [['fxtwitter', fetchFx], ['vxtwitter', fetchVx]] as const) {
+    try {
+      const data = await fn(cleanHandle);
+      if (data) return { data, source: 'available' };
+    } catch (err) {
+      console.error(`[twitter] ${name} ${cleanHandle} → ${(err as Error).message}`);
     }
-
-    const variables = encodeURIComponent(
-      JSON.stringify({ screen_name: cleanHandle, withSafetyModeUserFields: true })
-    );
-    const features = encodeURIComponent(JSON.stringify(FEATURES));
-    const url = `https://api.twitter.com/graphql/${USER_QUERY_ID}/UserByScreenName?variables=${variables}&features=${features}`;
-
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${GUEST_BEARER}`,
-        'x-guest-token': guestToken,
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!res.ok) {
-      console.error(`[twitter-syndication] ${cleanHandle} → HTTP ${res.status}`);
-      return { data: null, source: 'failed', reason: `graphql ${res.status}` };
-    }
-
-    const json = await res.json() as {
-      data?: { user?: { result?: { legacy?: LegacyUser; is_blue_verified?: boolean; __typename?: string } } };
-    };
-
-    const result = json.data?.user?.result;
-    if (!result || result.__typename === 'UserUnavailable' || !result.legacy) {
-      return { data: null, source: 'not_found', reason: 'user not found' };
-    }
-
-    const l = result.legacy;
-    const profile: TwitterProfile = {
-      displayName: l.name ?? null,
-      handle: l.screen_name ?? cleanHandle,
-      bio: l.description ?? null,
-      followers: l.followers_count ?? null,
-      following: l.friends_count ?? null,
-      tweetCount: l.statuses_count ?? null,
-      createdAt: l.created_at ?? null,
-      accountAgeDays: ageDaysFrom(l.created_at),
-      isVerified: l.verified ?? false,
-      isBlueVerified: result.is_blue_verified ?? false,
-      profileImageUrl: l.profile_image_url_https ?? null,
-    };
-
-    return { data: profile, source: 'available' };
-  } catch (err) {
-    console.error(`[twitter-syndication] ${cleanHandle} → ${(err as Error).message}`);
-    return { data: null, source: 'failed', reason: (err as Error).message };
   }
+
+  return { data: null, source: 'failed', reason: 'all twitter proxies failed or handle not found' };
 }
