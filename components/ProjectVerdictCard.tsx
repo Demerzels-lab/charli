@@ -25,7 +25,14 @@ export function ProjectVerdictCard({ verdict }: Props) {
     <div className="border border-line rounded-sm bg-surface p-6 space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-ink break-all">{verdict.query}</p>
+          {verdict.tokenName ? (
+            <>
+              <p className="text-sm font-semibold text-ink">{verdict.tokenName} {verdict.tokenSymbol ? `(${verdict.tokenSymbol})` : ''}</p>
+              <p className="text-xs text-ink-soft font-mono break-all mt-0.5">{verdict.query}</p>
+            </>
+          ) : (
+            <p className="text-sm font-semibold text-ink break-all">{verdict.query}</p>
+          )}
           <p className="text-xs text-ink-soft uppercase tracking-widest mt-1">
             {verdict.resolvedAs}
           </p>
@@ -41,6 +48,24 @@ export function ProjectVerdictCard({ verdict }: Props) {
       </div>
 
       <p className="text-sm text-ink text-pretty">{verdict.summary}</p>
+
+      {/* token stats */}
+      {(verdict.marketCap !== null || verdict.liquidityUsd !== null) && (
+        <div className="grid grid-cols-2 gap-2 text-xs tabular-nums text-ink-soft border-t border-line pt-3">
+          {verdict.marketCap !== null && <span>Market cap: ${verdict.marketCap.toLocaleString()}</span>}
+          {verdict.liquidityUsd !== null && <span>Liquidity: ${verdict.liquidityUsd.toFixed(0)}</span>}
+          {verdict.deployer && <span className="col-span-2 font-mono truncate">Deployer: {verdict.deployer}</span>}
+        </div>
+      )}
+
+      {/* socials */}
+      {verdict.socials && (verdict.socials.site || verdict.socials.telegram || verdict.socials.x) && (
+        <div className="flex flex-wrap gap-3 text-xs text-ink-soft border-t border-line pt-3">
+          {verdict.socials.site && <span>Web: {verdict.socials.site}</span>}
+          {verdict.socials.telegram && <span>TG: @{verdict.socials.telegram}</span>}
+          {verdict.socials.x && <span>X: {verdict.socials.x}</span>}
+        </div>
+      )}
 
       {verdict.domain && (
         <div className="text-xs tabular-nums text-ink-soft space-y-0.5 border-t border-line pt-3">

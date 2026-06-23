@@ -66,6 +66,12 @@ export type ProjectVerdict = {
   confidence: Confidence;
   riskScore: number; // 0-100
   summary: string;
+  tokenName?: string | null;
+  tokenSymbol?: string | null;
+  tokenImg?: string | null;
+  marketCap?: number | null;
+  deployer?: string | null;
+  liquidityUsd?: number | null;
   domain?: {
     ageDays: number | null;
     registrar: string | null;

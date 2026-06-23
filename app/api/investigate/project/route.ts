@@ -60,8 +60,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const [solsniffer, crtsh, whois] = await Promise.all([
     isContract ? fetchSolsnifferRisk(query) : Promise.resolve({
-      snifScore: null, mintAuthorityRisk: null, freezeAuthorityRisk: null,
-      holderConcentrationPct: null, auditStatus: null, isHoneypot: null,
+      snifScore: null, tokenName: null, tokenSymbol: null, tokenImg: null,
+      mintAuthorityRisk: null, freezeAuthorityRisk: null, lpBurned: null,
+      top10HoldersRisk: null, holderConcentrationPct: null, auditStatus: null,
+      isHoneypot: null, marketCap: null, deployer: null,
+      website: null, telegram: null, twitter: null, liquidityUsd: null, deployTime: null,
     }),
     domainQuery ? fetchCrtshDomainAge(domainQuery) : Promise.resolve({ firstIssuedAt: null, certCount: null }),
     domainQuery ? fetchWhoisDomain(domainQuery) : Promise.resolve({ createdAt: null, registrar: null, ageDays: null }),
@@ -86,9 +89,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     ...partialVerdict,
     query,
     resolvedAs,
+    tokenName: solsniffer.tokenName,
+    tokenSymbol: solsniffer.tokenSymbol,
+    tokenImg: solsniffer.tokenImg,
+    marketCap: solsniffer.marketCap,
+    deployer: solsniffer.deployer,
+    liquidityUsd: solsniffer.liquidityUsd,
     domain: (whois.createdAt || whois.ageDays !== null)
       ? { ageDays: whois.ageDays, registrar: whois.registrar, createdAt: whois.createdAt }
       : undefined,
+    socials: (solsniffer.website || solsniffer.telegram || solsniffer.twitter)
+      ? { site: solsniffer.website ?? undefined, telegram: solsniffer.telegram ?? undefined, x: solsniffer.twitter ?? undefined }
+      : partialVerdict.socials,
   };
 
   await setCache(cacheKey, verdict);

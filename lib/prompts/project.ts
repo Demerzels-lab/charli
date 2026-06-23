@@ -51,12 +51,20 @@ Total SSL certificates issued: ${crtsh.certCount ?? 'unknown'}`
 
   const contractSection = resolvedAs === 'contract'
     ? `
+Token name: ${solsniffer.tokenName ?? 'unknown'}
+Token symbol: ${solsniffer.tokenSymbol ?? 'unknown'}
 Solsniffer score: ${solsniffer.snifScore !== null ? `${solsniffer.snifScore}/100` : 'unavailable'}
 Mint authority active: ${solsniffer.mintAuthorityRisk !== null ? String(solsniffer.mintAuthorityRisk) : 'unknown'}
 Freeze authority active: ${solsniffer.freezeAuthorityRisk !== null ? String(solsniffer.freezeAuthorityRisk) : 'unknown'}
-Top-10 holders % of supply: ${solsniffer.holderConcentrationPct !== null ? `${solsniffer.holderConcentrationPct}%` : 'unknown'}
+LP burned: ${solsniffer.lpBurned !== null ? String(solsniffer.lpBurned) : 'unknown'}
+Top-10 holders risk: ${solsniffer.top10HoldersRisk !== null ? String(solsniffer.top10HoldersRisk) : 'unknown'}
 Audit status: ${solsniffer.auditStatus ?? 'unaudited/unknown'}
-Is honeypot: ${solsniffer.isHoneypot !== null ? String(solsniffer.isHoneypot) : 'unknown'}`
+Market cap: ${solsniffer.marketCap !== null ? `$${solsniffer.marketCap.toLocaleString()}` : 'unknown'}
+Liquidity: ${solsniffer.liquidityUsd !== null ? `$${solsniffer.liquidityUsd.toFixed(2)}` : 'unknown'}
+Deployer: ${solsniffer.deployer ?? 'unknown'}
+Website: ${solsniffer.website ?? 'none'}
+Telegram: ${solsniffer.telegram ?? 'none'}
+Twitter: ${solsniffer.twitter ?? 'none'}`
     : '';
 
   return `
