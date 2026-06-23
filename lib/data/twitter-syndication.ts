@@ -52,12 +52,16 @@ export async function fetchTwitterProfile(handle: string): Promise<TwitterFetchR
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
-        Accept: 'text/html',
+        Accept: 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+        Referer: 'https://platform.twitter.com/',
+        Origin: 'https://platform.twitter.com',
       },
       signal: AbortSignal.timeout(10000),
     });
 
     if (!res.ok) {
+      console.error(`[twitter-syndication] ${cleanHandle} → HTTP ${res.status}`);
       return { data: null, source: 'failed', reason: `syndication ${res.status}` };
     }
 
