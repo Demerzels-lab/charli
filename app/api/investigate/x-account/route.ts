@@ -1,12 +1,16 @@
 // app/api/investigate/x-account/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import type { ApiResponse, XAccountVerdict } from '@/lib/types';
+import type { ApiResponse, XAccountVerdict, XDataSources, DataSourceStatus } from '@/lib/types';
 import { getCache, setCache } from '@/lib/cache';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { callLLM } from '@/lib/openrouter';
-import { fetchNitterProfile } from '@/lib/data/nitter';
+import { fetchTwitterProfile } from '@/lib/data/twitter-syndication';
 import { fetchUsernameHistory } from '@/lib/data/memory-lol';
-import { X_ACCOUNT_SYSTEM_PROMPT, buildXAccountEvidence } from '@/lib/prompts/x-account';
+import {
+  X_ACCOUNT_SYSTEM_PROMPT,
+  buildXAccountEvidence,
+  computeCompleteness,
+} from '@/lib/prompts/x-account';
 
 function getIp(req: NextRequest): string {
   return (
@@ -23,7 +27,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json() as { handle?: unknown };
     if (typeof body.handle !== 'string' || body.handle.trim().length === 0) throw new Error();
-    handle = body.handle.trim().replace(/^@/, '');
+    handle = body.handle.trim().replace(/^(check\s+)?@?/i, '');
   } catch {
     return NextResponse.json({
       ok: false,
@@ -52,26 +56,74 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     } satisfies ApiResponse<XAccountVerdict>);
   }
 
-  const [nitter, memory] = await Promise.all([
-    fetchNitterProfile(handle),
+  const [twitterResult, memory] = await Promise.all([
+    fetchTwitterProfile(handle),
     fetchUsernameHistory(handle),
   ]);
 
-  const evidence = buildXAccountEvidence(handle, nitter, memory);
+  const twitterAvailable = twitterResult.source === 'available';
+  const memoryAvailable = memory.usernameHistory.length > 0;
+  const completeness = computeCompleteness(twitterAvailable, memoryAvailable);
+
+  const dataSources: XDataSources = {
+    twitter: twitterResult.source as DataSourceStatus,
+    memoryLol: memoryAvailable ? 'available' : 'no_data',
+  };
+
+  const evidence = buildXAccountEvidence(handle, twitterResult.data, memory, completeness);
+
+  // Base fields filled from real fetched data (LLM can't override these facts).
+  const baseMetrics = {
+    accountAgeDays: twitterResult.data?.accountAgeDays ?? null,
+    followers: twitterResult.data?.followers ?? null,
+    following: twitterResult.data?.following ?? null,
+    usernameChanges: memoryAvailable ? memory.totalChanges : null,
+    firstCryptoMentionDays: null,
+  };
+  const displayName = twitterResult.data?.displayName ?? null;
+  const isVerified = (twitterResult.data?.isVerified || twitterResult.data?.isBlueVerified) ?? false;
 
   let verdict: XAccountVerdict;
   try {
     const raw = await callLLM(X_ACCOUNT_SYSTEM_PROMPT, evidence);
     const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const parsed = JSON.parse(clean) as Omit<XAccountVerdict, 'handle'>;
-    verdict = { ...parsed, handle };
+    const parsed = JSON.parse(clean) as Omit<XAccountVerdict, 'handle' | 'dataSources' | 'dataCompleteness' | 'displayName' | 'isVerified'>;
+
+    verdict = {
+      ...parsed,
+      handle,
+      displayName,
+      isVerified,
+      metrics: { ...parsed.metrics, ...baseMetrics },
+      dataSources,
+      dataCompleteness: completeness,
+    };
+
+    // Safeguard: minimal data can never be a RED_FLAG.
+    if (completeness === 'minimal') {
+      verdict.level = 'UNVERIFIABLE';
+      verdict.confidence = 'UNKNOWN';
+      verdict.redFlags = [];
+    }
   } catch (err) {
     console.error('[x-account route] LLM parse error:', (err as Error).message);
-    return NextResponse.json({
-      ok: false,
-      error: { code: 'LLM_ERROR', message: 'Failed to generate verdict' },
-      meta: { cached: false, tookMs: Date.now() - start, ratelimit: { remaining: rateLimit.remaining, resetAt: rateLimit.resetAt } },
-    } satisfies ApiResponse<never>, { status: 500 });
+    // Graceful fallback verdict instead of 500.
+    verdict = {
+      handle,
+      displayName,
+      isVerified,
+      level: completeness === 'minimal' ? 'UNVERIFIABLE' : 'DYOR',
+      confidence: 'UNKNOWN',
+      summary:
+        completeness === 'minimal'
+          ? 'Could not retrieve enough public data to assess this account.'
+          : 'Analysis engine unavailable. Showing raw fetched data only.',
+      metrics: baseMetrics,
+      signals: [],
+      redFlags: [],
+      dataSources,
+      dataCompleteness: completeness,
+    };
   }
 
   await setCache(cacheKey, verdict);

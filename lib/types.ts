@@ -16,7 +16,7 @@ export type ApiResponse<T> =
   | { ok: false; error: { code: string; message: string }; meta: ApiMeta };
 
 export type SignalDirection = 'ok' | 'warn' | 'bad';
-export type Confidence = 'TENTATIVE' | 'FIRM' | 'CONFIRMED';
+export type Confidence = 'UNKNOWN' | 'TENTATIVE' | 'FIRM' | 'CONFIRMED';
 export type WalletLevel = 'CLEAN' | 'WATCH' | 'FLAGGED';
 export type WalletClassification = 'dev' | 'whale' | 'flipper' | 'fresh' | 'mixed';
 export type Chain = 'solana' | 'evm';
@@ -87,7 +87,7 @@ export type ProjectVerdict = {
 
 // --- X Account types ---
 
-export type XAccountLevel = 'LEGIT' | 'DYOR' | 'RED_FLAG';
+export type XAccountLevel = 'LEGIT' | 'DYOR' | 'RED_FLAG' | 'UNVERIFIABLE';
 
 export type XMetrics = {
   accountAgeDays: number | null;
@@ -97,14 +97,27 @@ export type XMetrics = {
   firstCryptoMentionDays: number | null;
 };
 
+export type DataSourceStatus = 'available' | 'not_found' | 'failed' | 'no_data';
+
+export type XDataSources = {
+  twitter: DataSourceStatus;
+  memoryLol: DataSourceStatus;
+};
+
+export type DataCompleteness = 'full' | 'partial' | 'minimal';
+
 export type XAccountVerdict = {
   handle: string;
+  displayName: string | null;
   level: XAccountLevel;
   confidence: Confidence;
   summary: string;
+  isVerified: boolean;
   metrics: XMetrics;
   signals: Signal[];
   redFlags: string[];
+  dataSources: XDataSources;
+  dataCompleteness: DataCompleteness;
 };
 
 // --- Agent types ---

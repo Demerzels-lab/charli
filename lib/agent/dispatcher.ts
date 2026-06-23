@@ -9,12 +9,12 @@ import { fetchSolsnifferRisk } from '../data/solsniffer';
 import { fetchCrtshDomainAge } from '../data/crtsh';
 import { fetchWhoisDomain } from '../data/whois';
 import { classifyProjectInput } from '../data/input-classifier';
-import { fetchNitterProfile } from '../data/nitter';
+import { fetchTwitterProfile } from '../data/twitter-syndication';
 import { fetchUsernameHistory } from '../data/memory-lol';
 import { WALLET_SYSTEM_PROMPT, buildWalletEvidence } from '../prompts/wallet';
 import { PROJECT_SYSTEM_PROMPT, buildProjectEvidence } from '../prompts/project';
-import { X_ACCOUNT_SYSTEM_PROMPT, buildXAccountEvidence } from '../prompts/x-account';
-import type { AgentIntent, AgentMessage, WalletVerdict, ProjectVerdict, XAccountVerdict } from '../types';
+import { X_ACCOUNT_SYSTEM_PROMPT, buildXAccountEvidence, computeCompleteness } from '../prompts/x-account';
+import type { AgentIntent, AgentMessage, WalletVerdict, ProjectVerdict, XAccountVerdict, XDataSources, DataSourceStatus } from '../types';
 
 const INTENT_SYSTEM_PROMPT = `You are an intent classifier for a crypto investigation tool. Given the latest user message, classify the intent as JSON.
 
@@ -96,15 +96,49 @@ export async function dispatchInvestigation(
 
   if (intent.type === 'x-account') {
     const { handle } = intent;
-    const [nitter, memory] = await Promise.all([
-      fetchNitterProfile(handle),
+    const [twitterResult, memory] = await Promise.all([
+      fetchTwitterProfile(handle),
       fetchUsernameHistory(handle),
     ]);
-    const evidence = buildXAccountEvidence(handle, nitter, memory);
+
+    const twitterAvailable = twitterResult.source === 'available';
+    const memoryAvailable = memory.usernameHistory.length > 0;
+    const completeness = computeCompleteness(twitterAvailable, memoryAvailable);
+
+    const dataSources: XDataSources = {
+      twitter: twitterResult.source as DataSourceStatus,
+      memoryLol: memoryAvailable ? 'available' : 'no_data',
+    };
+    const baseMetrics = {
+      accountAgeDays: twitterResult.data?.accountAgeDays ?? null,
+      followers: twitterResult.data?.followers ?? null,
+      following: twitterResult.data?.following ?? null,
+      usernameChanges: memoryAvailable ? memory.totalChanges : null,
+      firstCryptoMentionDays: null,
+    };
+    const displayName = twitterResult.data?.displayName ?? null;
+    const isVerified = (twitterResult.data?.isVerified || twitterResult.data?.isBlueVerified) ?? false;
+
+    const evidence = buildXAccountEvidence(handle, twitterResult.data, memory, completeness);
     const raw = await callLLM(X_ACCOUNT_SYSTEM_PROMPT, evidence);
     const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const parsed = JSON.parse(clean) as Omit<XAccountVerdict, 'handle'>;
-    return { ...parsed, handle };
+    const parsed = JSON.parse(clean) as Omit<XAccountVerdict, 'handle' | 'dataSources' | 'dataCompleteness' | 'displayName' | 'isVerified'>;
+
+    const verdict: XAccountVerdict = {
+      ...parsed,
+      handle,
+      displayName,
+      isVerified,
+      metrics: { ...parsed.metrics, ...baseMetrics },
+      dataSources,
+      dataCompleteness: completeness,
+    };
+    if (completeness === 'minimal') {
+      verdict.level = 'UNVERIFIABLE';
+      verdict.confidence = 'UNKNOWN';
+      verdict.redFlags = [];
+    }
+    return verdict;
   }
 
   return null;
