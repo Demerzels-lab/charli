@@ -17,7 +17,7 @@ export type ApiResponse<T> =
 
 export type SignalDirection = 'ok' | 'warn' | 'bad';
 export type Confidence = 'UNKNOWN' | 'TENTATIVE' | 'FIRM' | 'CONFIRMED';
-export type WalletLevel = 'CLEAN' | 'WATCH' | 'FLAGGED';
+export type WalletLevel = 'CLEAN' | 'WATCH' | 'FLAGGED' | 'UNVERIFIABLE';
 export type WalletClassification = 'dev' | 'whale' | 'flipper' | 'fresh' | 'mixed';
 export type Chain = 'solana' | 'evm';
 

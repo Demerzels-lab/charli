@@ -73,20 +73,55 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     fetchDuneWalletActivity(address),
   ]);
 
-  const evidence = buildWalletEvidence(address, chain, solscan, helius, etherscan, dune);
+  // Detect data completeness — all null means no API keys configured.
+  const hasOnChainData = chain === 'solana'
+    ? (solscan.balanceSol !== null || solscan.txCount !== null || helius.firstTxTime !== null)
+    : (etherscan.balanceWei !== null || etherscan.txCount !== null);
+  const hasDuneData = dune.tradeCount !== null || dune.totalProfitUsd !== null;
+  const dataMinimal = !hasOnChainData && !hasDuneData;
+
   let verdict: WalletVerdict;
-  try {
-    const raw = await callLLM(WALLET_SYSTEM_PROMPT, evidence);
-    const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const parsed = JSON.parse(clean) as Omit<WalletVerdict, 'address' | 'chain'>;
-    verdict = { ...parsed, address, chain };
-  } catch (err) {
-    console.error('[wallet route] LLM parse error:', (err as Error).message);
-    return NextResponse.json({
-      ok: false,
-      error: { code: 'LLM_ERROR', message: 'Failed to generate verdict' },
-      meta: { cached: false, tookMs: Date.now() - start, ratelimit: { remaining: rateLimit.remaining, resetAt: rateLimit.resetAt } },
-    } satisfies ApiResponse<never>, { status: 500 });
+
+  if (dataMinimal) {
+    verdict = {
+      address,
+      chain,
+      level: 'UNVERIFIABLE',
+      confidence: 'UNKNOWN',
+      classification: 'fresh',
+      summary: 'No on-chain data could be retrieved — API keys not configured. Verdict is UNVERIFIABLE; absence of data is not evidence of wrongdoing.',
+      balanceUsd: null,
+      firstSeen: null,
+      lastActive: null,
+      linkedProjects: [],
+      signals: [
+        { label: 'Data sources', value: 'No blockchain API keys configured (Solscan/Helius/Etherscan/Dune)', direction: 'warn' },
+        { label: 'Address format', value: `Valid ${chain} address`, direction: 'ok' },
+      ],
+    };
+  } else {
+    const evidence = buildWalletEvidence(address, chain, solscan, helius, etherscan, dune);
+    try {
+      const raw = await callLLM(WALLET_SYSTEM_PROMPT, evidence);
+      const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const parsed = JSON.parse(clean) as Omit<WalletVerdict, 'address' | 'chain'>;
+      verdict = { ...parsed, address, chain };
+    } catch (err) {
+      console.error('[wallet route] LLM parse error:', (err as Error).message);
+      verdict = {
+        address,
+        chain,
+        level: 'UNVERIFIABLE',
+        confidence: 'UNKNOWN',
+        classification: 'mixed',
+        summary: 'Analysis engine unavailable. Raw data fetched but could not generate verdict.',
+        balanceUsd: null,
+        firstSeen: null,
+        lastActive: null,
+        linkedProjects: [],
+        signals: [],
+      };
+    }
   }
 
   await setCache(cacheKey, verdict);

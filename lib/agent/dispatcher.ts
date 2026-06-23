@@ -65,6 +65,21 @@ export async function dispatchInvestigation(
       chain === 'evm' ? fetchEtherscanWallet(address) : Promise.resolve({ balanceWei: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null }),
       fetchDuneWalletActivity(address),
     ]);
+    const hasOnChainData = chain === 'solana'
+      ? (solscan.balanceSol !== null || solscan.txCount !== null || helius.firstTxTime !== null)
+      : (etherscan.balanceWei !== null || etherscan.txCount !== null);
+    const hasDuneData = dune.tradeCount !== null || dune.totalProfitUsd !== null;
+    if (!hasOnChainData && !hasDuneData) {
+      return {
+        address, chain,
+        level: 'UNVERIFIABLE' as const,
+        confidence: 'UNKNOWN' as const,
+        classification: 'fresh' as const,
+        summary: 'No on-chain data could be retrieved — API keys not configured. Verdict is UNVERIFIABLE.',
+        balanceUsd: null, firstSeen: null, lastActive: null, linkedProjects: [],
+        signals: [{ label: 'Data sources', value: 'No blockchain API keys configured', direction: 'warn' as const }],
+      };
+    }
     const evidence = buildWalletEvidence(address, chain, solscan, helius, etherscan, dune);
     const raw = await callLLM(WALLET_SYSTEM_PROMPT, evidence);
     const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
