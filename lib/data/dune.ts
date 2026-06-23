@@ -6,9 +6,10 @@ export type DuneWalletData = {
   classification: 'dev' | 'whale' | 'flipper' | 'fresh' | 'mixed' | null;
 };
 
-const DUNE_QUERY_ID = '3306925';
+export async function fetchDuneWalletActivity(_address: string): Promise<DuneWalletData> {
+  // Dune query disabled — no public pump.fun query available.
+  return { totalProfitUsd: null, tradeCount: null, classification: null };
 
-export async function fetchDuneWalletActivity(address: string): Promise<DuneWalletData> {
   const key = process.env.DUNE_API_KEY;
   if (!key) return { totalProfitUsd: null, tradeCount: null, classification: null };
 
