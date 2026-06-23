@@ -41,6 +41,7 @@ type Props = { verdict: XAccountVerdict };
 
 export function XVerdictCard({ verdict }: Props) {
   const minimal = verdict.dataCompleteness === 'minimal';
+  const sources: XDataSources = verdict.dataSources ?? { twitter: 'failed', memoryLol: 'no_data' };
 
   return (
     <div className="border border-line rounded-sm bg-surface p-6 space-y-4">
@@ -128,12 +129,12 @@ export function XVerdictCard({ verdict }: Props) {
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
         <span className="text-xs text-ink-soft uppercase tracking-widest">Sources</span>
         <span className="inline-flex items-center gap-1.5 text-xs text-ink-soft">
-          <span className={`size-1.5 rounded-full ${SOURCE_DOT[verdict.dataSources.twitter]}`} />
-          Twitter: {SOURCE_LABEL[verdict.dataSources.twitter]}
+          <span className={`size-1.5 rounded-full ${SOURCE_DOT[sources.twitter]}`} />
+          Twitter: {SOURCE_LABEL[sources.twitter]}
         </span>
         <span className="inline-flex items-center gap-1.5 text-xs text-ink-soft">
-          <span className={`size-1.5 rounded-full ${SOURCE_DOT[verdict.dataSources.memoryLol]}`} />
-          memory.lol: {SOURCE_LABEL[verdict.dataSources.memoryLol]}
+          <span className={`size-1.5 rounded-full ${SOURCE_DOT[sources.memoryLol]}`} />
+          memory.lol: {SOURCE_LABEL[sources.memoryLol]}
         </span>
       </div>
     </div>
