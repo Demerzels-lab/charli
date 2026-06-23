@@ -22,7 +22,12 @@ export type TwitterFetchResult = {
   reason?: string;
 };
 
-const SYNDICATION_URL = 'https://syndication.twitter.com/srv/timeline-profile/screen-name';
+// cdn host first — CDN-backed, lenient rate limits for datacenter IPs.
+// syndication.twitter.com is the origin and aggressively 429s shared cloud IPs.
+const SYNDICATION_HOSTS = [
+  'https://cdn.syndication.twimg.com/srv/timeline-profile/screen-name',
+  'https://syndication.twitter.com/srv/timeline-profile/screen-name',
+];
 
 type RawUser = {
   name?: string;
@@ -48,24 +53,28 @@ export async function fetchTwitterProfile(handle: string): Promise<TwitterFetchR
   const cleanHandle = handle.replace(/^@/, '');
 
   try {
-    const res = await fetch(`${SYNDICATION_URL}/${encodeURIComponent(cleanHandle)}`, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
-        Accept: 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-        Referer: 'https://platform.twitter.com/',
-        Origin: 'https://platform.twitter.com',
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!res.ok) {
-      console.error(`[twitter-syndication] ${cleanHandle} → HTTP ${res.status}`);
-      return { data: null, source: 'failed', reason: `syndication ${res.status}` };
+    let html: string | null = null;
+    let lastStatus = 0;
+    for (const host of SYNDICATION_HOSTS) {
+      const res = await fetch(`${host}/${encodeURIComponent(cleanHandle)}`, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9',
+          Referer: 'https://platform.twitter.com/',
+          Origin: 'https://platform.twitter.com',
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) { html = await res.text(); break; }
+      lastStatus = res.status;
     }
 
-    const html = await res.text();
+    if (html === null) {
+      console.error(`[twitter-syndication] ${cleanHandle} → HTTP ${lastStatus}`);
+      return { data: null, source: 'failed', reason: `syndication ${lastStatus}` };
+    }
 
     // Extract embedded Next.js JSON payload.
     const match = html.match(
