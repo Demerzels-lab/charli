@@ -10,6 +10,7 @@ import { fetchCrtshDomainAge } from '../data/crtsh';
 import { fetchWhoisDomain } from '../data/whois';
 import { fetchDexscreenerToken } from '../data/dexscreener';
 import { fetchRugcheckReport } from '../data/rugcheck';
+import { fetchWebsiteMeta } from '../data/website';
 import { classifyProjectInput } from '../data/input-classifier';
 import { fetchTwitterProfile } from '../data/twitter-syndication';
 import { fetchUsernameHistory } from '../data/memory-lol';
@@ -62,13 +63,13 @@ export async function dispatchInvestigation(
     if (!chain) return null;
 
     const [solscan, helius, etherscan, dune] = await Promise.all([
-      chain === 'solana' ? fetchSolscanWallet(address) : Promise.resolve({ balanceSol: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null }),
+      chain === 'solana' ? fetchSolscanWallet(address) : Promise.resolve({ balanceSol: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null, tokenCount: null }),
       chain === 'solana' ? fetchHeliusWallet(address) : Promise.resolve({ balanceUsd: null, firstTxTime: null, lastTxTime: null }),
       chain === 'evm' ? fetchEtherscanWallet(address) : Promise.resolve({ balanceWei: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null }),
       fetchDuneWalletActivity(address),
     ]);
     const hasOnChainData = chain === 'solana'
-      ? (solscan.balanceSol !== null || solscan.txCount !== null || helius.firstTxTime !== null)
+      ? (solscan.balanceSol !== null || solscan.tokenCount !== null || solscan.lastTxTime !== null || helius.firstTxTime !== null || helius.lastTxTime !== null)
       : (etherscan.balanceWei !== null || etherscan.txCount !== null);
     const hasDuneData = dune.tradeCount !== null || dune.totalProfitUsd !== null;
     if (!hasOnChainData && !hasDuneData) {
@@ -94,7 +95,7 @@ export async function dispatchInvestigation(
     const resolvedAs = classifyProjectInput(query);
     const isContract = resolvedAs === 'contract';
     const domainQuery = resolvedAs === 'domain' ? query : resolvedAs === 'name' ? `${query}.com` : null;
-    const [solsniffer, crtsh, whois, dexscreener, rugcheck] = await Promise.all([
+    const [solsniffer, crtsh, whois, dexscreener, rugcheck, website] = await Promise.all([
       isContract ? fetchSolsnifferRisk(query) : Promise.resolve({
         snifScore: null, tokenName: null, tokenSymbol: null, tokenImg: null,
         mintAuthorityRisk: null, freezeAuthorityRisk: null, lpBurned: null,
@@ -106,8 +107,9 @@ export async function dispatchInvestigation(
       domainQuery ? fetchWhoisDomain(domainQuery) : Promise.resolve({ createdAt: null, registrar: null, ageDays: null }),
       isContract ? fetchDexscreenerToken(query) : Promise.resolve({ tokenName: null, tokenSymbol: null, pairCreatedAt: null, website: null, twitter: null, telegram: null }),
       isContract ? fetchRugcheckReport(query) : Promise.resolve({ score: null, mintAuthorityActive: null, freezeAuthorityActive: null, lpLockedPct: null, top10HoldersPct: null, rugged: null }),
+      domainQuery ? fetchWebsiteMeta(domainQuery) : Promise.resolve({ isLive: false, statusCode: null, title: null, description: null, hasCryptoKeywords: false, socialLinks: [] }),
     ]);
-    const evidence = buildProjectEvidence(query, resolvedAs, solsniffer, crtsh, whois, dexscreener, rugcheck);
+    const evidence = buildProjectEvidence(query, resolvedAs, solsniffer, crtsh, whois, dexscreener, rugcheck, website);
     const raw = await callLLM(PROJECT_SYSTEM_PROMPT, evidence);
     const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const partial = JSON.parse(clean) as Omit<ProjectVerdict, 'query' | 'resolvedAs'>;

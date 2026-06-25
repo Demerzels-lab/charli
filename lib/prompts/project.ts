@@ -5,6 +5,7 @@ import type { CrtshData } from '../data/crtsh';
 import type { WhoisData } from '../data/whois';
 import type { DexscreenerData } from '../data/dexscreener';
 import type { RugcheckData } from '../data/rugcheck';
+import type { WebsiteData } from '../data/website';
 
 export const PROJECT_SYSTEM_PROMPT = `You are CARLI — a crypto intelligence analyst specializing in rug pull detection and project OSINT. You receive evidence about a crypto project and return a verdict as raw JSON only. No prose, no markdown fences.
 
@@ -44,7 +45,8 @@ export function buildProjectEvidence(
   crtsh: CrtshData,
   whois: WhoisData,
   dexscreener: DexscreenerData,
-  rugcheck: RugcheckData
+  rugcheck: RugcheckData,
+  website: WebsiteData
 ): string {
   const domainSection = resolvedAs === 'domain' || resolvedAs === 'name'
     ? `
@@ -52,7 +54,12 @@ Domain age: ${whois.ageDays !== null ? `${whois.ageDays} days` : 'unknown'}
 Domain created: ${whois.createdAt ?? 'unknown'}
 Registrar: ${whois.registrar ?? 'unknown'}
 Earliest SSL certificate: ${crtsh.firstIssuedAt ?? 'unknown'}
-Total SSL certificates issued: ${crtsh.certCount ?? 'unknown'}`
+Total SSL certificates issued: ${crtsh.certCount ?? 'unknown'}
+Website is live: ${website.isLive ? `yes (HTTP ${website.statusCode})` : website.statusCode !== null ? `no (HTTP ${website.statusCode})` : 'could not reach'}
+Website title: ${website.title ?? 'none'}
+Website description: ${website.description ?? 'none'}
+Website mentions crypto/token keywords: ${website.hasCryptoKeywords ? 'yes' : 'no'}
+Social links found on site: ${website.socialLinks.length > 0 ? website.socialLinks.join(', ') : 'none'}`
     : '';
 
   const contractSection = resolvedAs === 'contract'

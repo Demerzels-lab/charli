@@ -1,11 +1,24 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import type { AgentMessage, WalletVerdict, ProjectVerdict, XAccountVerdict } from '@/lib/types';
 import { AgentToolBadge } from './AgentToolBadge';
 import { WalletVerdictCard } from './WalletVerdictCard';
 import { ProjectVerdictCard } from './ProjectVerdictCard';
 import { XVerdictCard } from './XVerdictCard';
+
+function CarliAvatar({ size = 32 }: { size?: number }) {
+  return (
+    <Image
+      src="/logo.png"
+      alt="CARLI"
+      width={size}
+      height={size}
+      className="shrink-0 rounded-full border border-line bg-surface object-cover"
+    />
+  );
+}
 
 type ToolEvent = { name: string; status: 'running' | 'done' | 'failed' };
 type VerdictData = WalletVerdict | ProjectVerdict | XAccountVerdict;
@@ -137,6 +150,8 @@ export function AgentChat() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-5 py-4 pr-1">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+            <CarliAvatar size={64} />
+            <p className="text-sm font-semibold text-ink">CARLI is ready.</p>
             <p className="text-sm text-ink-soft">Paste a wallet, X handle, or project name.</p>
             <div className="flex flex-wrap justify-center gap-2">
               {['0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', '@elonmusk', 'pump.fun'].map(hint => (
@@ -159,28 +174,37 @@ export function AgentChat() {
                 {msg.content}
               </div>
             ) : (
-              <div className="space-y-2 max-w-xl">
-                {msg.tools.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {msg.tools.map((t, j) => (
-                      <AgentToolBadge key={j} name={t.name} status={t.status} />
-                    ))}
-                  </div>
-                )}
-                {msg.verdict && (
-                  <div>
-                    {isWalletVerdict(msg.verdict) && <WalletVerdictCard verdict={msg.verdict} />}
-                    {isProjectVerdict(msg.verdict) && <ProjectVerdictCard verdict={msg.verdict} />}
-                    {!isWalletVerdict(msg.verdict) && !isProjectVerdict(msg.verdict) && (
-                      <XVerdictCard verdict={msg.verdict as XAccountVerdict} />
-                    )}
-                  </div>
-                )}
-                {msg.content && (
-                  <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">
-                    {cleanText(msg.content)}
-                  </p>
-                )}
+              <div className="flex gap-2.5">
+                <CarliAvatar />
+                <div className="space-y-2 max-w-xl flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">CARLI</p>
+                  {msg.tools.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {msg.tools.map((t, j) => (
+                        <AgentToolBadge key={j} name={t.name} status={t.status} />
+                      ))}
+                    </div>
+                  )}
+                  {msg.verdict && (
+                    <div>
+                      {isWalletVerdict(msg.verdict) && <WalletVerdictCard verdict={msg.verdict} />}
+                      {isProjectVerdict(msg.verdict) && <ProjectVerdictCard verdict={msg.verdict} />}
+                      {!isWalletVerdict(msg.verdict) && !isProjectVerdict(msg.verdict) && (
+                        <XVerdictCard verdict={msg.verdict as XAccountVerdict} />
+                      )}
+                    </div>
+                  )}
+                  {msg.content ? (
+                    <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">
+                      {cleanText(msg.content)}
+                    </p>
+                  ) : msg.tools.length === 0 && !msg.verdict ? (
+                    <div className="flex items-center gap-1.5 text-sm text-ink-soft">
+                      <span className="size-1.5 rounded-full bg-gold animate-pulse" />
+                      CARLI is reading the signals…
+                    </div>
+                  ) : null}
+                </div>
               </div>
             )}
           </div>

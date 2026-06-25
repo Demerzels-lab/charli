@@ -47,10 +47,15 @@ export function buildWalletEvidence(
     ? (solscan.lastTxTime ?? helius.lastTxTime)
     : etherscan.lastTxTime;
 
+  const tokenHoldings = chain === 'solana' && solscan.tokenCount !== null
+    ? `${solscan.tokenCount} distinct SPL token${solscan.tokenCount === 1 ? '' : 's'} held`
+    : 'unknown';
+
   return `
 Wallet address: ${address}
 Chain: ${chain}
 Balance: ${balance}
+Token holdings: ${tokenHoldings}
 First transaction: ${firstSeen ?? 'unknown'}
 Last active: ${lastActive ?? 'unknown'}
 Pump.fun trade count: ${dune.tradeCount ?? 'no data'}

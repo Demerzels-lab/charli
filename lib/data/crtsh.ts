@@ -9,7 +9,7 @@ export async function fetchCrtshDomainAge(domain: string): Promise<CrtshData> {
   try {
     const res = await fetch(
       `https://crt.sh/?q=${encodeURIComponent(domain)}&output=json`,
-      { next: { revalidate: 0 } }
+      { next: { revalidate: 0 }, signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) throw new Error(`crt.sh ${res.status}`);
     const certs = await res.json() as Array<{ not_before?: string }>;

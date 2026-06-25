@@ -92,11 +92,11 @@ export function Capabilities() {
                   </div>
                 </div>
 
-                <p className="text-pretty text-sm leading-relaxed text-ink-soft md:col-span-6">
+                <p className="text-pretty text-sm leading-relaxed text-ink-soft md:col-span-5">
                   {c.body}
                 </p>
 
-                <div className="hidden items-center justify-center md:col-span-1 md:flex">
+                <div className="hidden items-center justify-center border border-line bg-bg p-2 transition-colors group-hover:border-gold/40 md:col-span-2 md:flex">
                   <c.Icon />
                 </div>
 

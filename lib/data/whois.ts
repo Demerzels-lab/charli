@@ -10,7 +10,12 @@ export async function fetchWhoisDomain(domain: string): Promise<WhoisData> {
   try {
     const whoisModule = await import('whois-json');
     const whois = whoisModule.default;
-    const result = await whois(domain) as Record<string, unknown>;
+    const result = await Promise.race([
+      whois(domain) as Promise<Record<string, unknown>>,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('whois timeout')), 8000)
+      ),
+    ]);
 
     const createdRaw =
       (result.creationDate as string | undefined) ??

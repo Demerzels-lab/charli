@@ -10,6 +10,7 @@ import { fetchCrtshDomainAge } from '@/lib/data/crtsh';
 import { fetchWhoisDomain } from '@/lib/data/whois';
 import { fetchDexscreenerToken } from '@/lib/data/dexscreener';
 import { fetchRugcheckReport } from '@/lib/data/rugcheck';
+import { fetchWebsiteMeta } from '@/lib/data/website';
 import { PROJECT_SYSTEM_PROMPT, buildProjectEvidence } from '@/lib/prompts/project';
 
 function getIp(req: NextRequest): string {
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const isContract = resolvedAs === 'contract';
   const domainQuery = resolvedAs === 'domain' ? query : resolvedAs === 'name' ? `${query}.com` : null;
 
-  const [solsniffer, crtsh, whois, dexscreener, rugcheck] = await Promise.all([
+  const [solsniffer, crtsh, whois, dexscreener, rugcheck, website] = await Promise.all([
     isContract ? fetchSolsnifferRisk(query) : Promise.resolve({
       snifScore: null, tokenName: null, tokenSymbol: null, tokenImg: null,
       mintAuthorityRisk: null, freezeAuthorityRisk: null, lpBurned: null,
@@ -72,9 +73,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     domainQuery ? fetchWhoisDomain(domainQuery) : Promise.resolve({ createdAt: null, registrar: null, ageDays: null }),
     isContract ? fetchDexscreenerToken(query) : Promise.resolve({ tokenName: null, tokenSymbol: null, pairCreatedAt: null, website: null, twitter: null, telegram: null }),
     isContract ? fetchRugcheckReport(query) : Promise.resolve({ score: null, mintAuthorityActive: null, freezeAuthorityActive: null, lpLockedPct: null, top10HoldersPct: null, rugged: null }),
+    domainQuery ? fetchWebsiteMeta(domainQuery) : Promise.resolve({ isLive: false, statusCode: null, title: null, description: null, hasCryptoKeywords: false, socialLinks: [] }),
   ]);
 
-  const evidence = buildProjectEvidence(query, resolvedAs, solsniffer, crtsh, whois, dexscreener, rugcheck);
+  const evidence = buildProjectEvidence(query, resolvedAs, solsniffer, crtsh, whois, dexscreener, rugcheck, website);
   let partialVerdict: Omit<ProjectVerdict, 'query' | 'resolvedAs'>;
   try {
     const raw = await callLLM(PROJECT_SYSTEM_PROMPT, evidence);

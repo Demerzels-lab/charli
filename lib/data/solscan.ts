@@ -1,4 +1,6 @@
 // lib/data/solscan.ts
+// Solscan Pro API v2 — free tier (Level 1) key works with these endpoints.
+// Header auth: `token: <key>`. Base: pro-api.solscan.io/v2.0
 
 export type SolscanWalletData = {
   balanceSol: number | null;
@@ -6,50 +8,64 @@ export type SolscanWalletData = {
   firstTxTime: string | null;
   lastTxTime: string | null;
   txCount: number | null;
+  tokenCount: number | null;
+};
+
+const EMPTY: SolscanWalletData = {
+  balanceSol: null, balanceUsd: null, firstTxTime: null,
+  lastTxTime: null, txCount: null, tokenCount: null,
 };
 
 const BASE = 'https://pro-api.solscan.io/v2.0';
 
-async function solscanFetch(path: string): Promise<unknown> {
-  const key = process.env.SOLSCAN_API_KEY;
-  if (!key) throw new Error('Missing SOLSCAN_API_KEY');
-
+async function solscanFetch(path: string, key: string): Promise<Record<string, unknown> | null> {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { token: key },
+    headers: { token: key, Accept: 'application/json' },
+    signal: AbortSignal.timeout(8000),
     next: { revalidate: 0 },
   });
-  if (!res.ok) throw new Error(`Solscan ${res.status}`);
-  return res.json();
+  if (!res.ok) {
+    console.error(`[solscan] ${path} → HTTP ${res.status}`);
+    return null;
+  }
+  return res.json() as Promise<Record<string, unknown>>;
 }
 
 export async function fetchSolscanWallet(address: string): Promise<SolscanWalletData> {
+  const key = process.env.SOLSCAN_API_KEY;
+  if (!key) return EMPTY;
+
   try {
-    const [account, txList] = await Promise.all([
-      solscanFetch(`/account/${address}`),
-      solscanFetch(`/account/transactions?address=${address}&page=1&page_size=10&sort_by=block_time&sort_order=asc`),
+    const [detail, tokens, txs] = await Promise.all([
+      solscanFetch(`/account/detail?address=${address}`, key),
+      solscanFetch(`/account/token-accounts?address=${address}&type=token&page=1&page_size=40`, key),
+      solscanFetch(`/account/transactions?address=${address}&limit=10`, key),
     ]);
 
-    const acc = account as Record<string, unknown>;
-    const txs = (txList as { data?: Array<{ block_time?: number }> }).data ?? [];
+    // /account/detail → { data: { lamports, ... } }
+    const detailData = (detail?.data as Record<string, unknown>) ?? {};
+    const lamports = (detailData.lamports as number | undefined) ?? null;
+    const balanceSol = lamports !== null ? lamports / 1e9 : null;
 
-    const balanceLamports = (acc.lamports as number | undefined) ?? null;
-    const balanceSol = balanceLamports !== null ? balanceLamports / 1e9 : null;
-    const solPrice = (acc.sol_price as number | undefined) ?? null;
-    const balanceUsd = balanceSol !== null && solPrice !== null ? balanceSol * solPrice : null;
+    // /account/token-accounts → { data: [...] }
+    const tokenList = (tokens?.data as unknown[]) ?? [];
+    const tokenCount = Array.isArray(tokenList) ? tokenList.length : null;
 
-    const firstTx = txs[0]?.block_time;
-    const firstTxTime = firstTx ? new Date(firstTx * 1000).toISOString() : null;
-
-    const lastTxRes = await solscanFetch(
-      `/account/transactions?address=${address}&page=1&page_size=1&sort_by=block_time&sort_order=desc`
-    );
-    const lastTxs = (lastTxRes as { data?: Array<{ block_time?: number }> }).data ?? [];
-    const lastTx = lastTxs[0]?.block_time;
+    // /account/transactions → { data: [ { block_time }, ... ] } (newest first)
+    const txList = (txs?.data as Array<{ block_time?: number }>) ?? [];
+    const lastTx = txList[0]?.block_time;
     const lastTxTime = lastTx ? new Date(lastTx * 1000).toISOString() : null;
 
-    return { balanceSol, balanceUsd, firstTxTime, lastTxTime, txCount: null };
+    return {
+      balanceSol,
+      balanceUsd: null,
+      firstTxTime: null,
+      lastTxTime,
+      txCount: null,
+      tokenCount,
+    };
   } catch (err) {
     console.error('[solscan] fetch error:', (err as Error).message);
-    return { balanceSol: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null };
+    return EMPTY;
   }
 }

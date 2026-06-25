@@ -67,7 +67,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const [solscan, helius, etherscan, dune] = await Promise.all([
-    chain === 'solana' ? fetchSolscanWallet(address) : Promise.resolve({ balanceSol: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null }),
+    chain === 'solana' ? fetchSolscanWallet(address) : Promise.resolve({ balanceSol: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null, tokenCount: null }),
     chain === 'solana' ? fetchHeliusWallet(address) : Promise.resolve({ balanceUsd: null, firstTxTime: null, lastTxTime: null }),
     chain === 'evm' ? fetchEtherscanWallet(address) : Promise.resolve({ balanceWei: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null }),
     fetchDuneWalletActivity(address),
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Detect data completeness — all null means no API keys configured.
   const hasOnChainData = chain === 'solana'
-    ? (solscan.balanceSol !== null || solscan.txCount !== null || helius.firstTxTime !== null)
+    ? (solscan.balanceSol !== null || solscan.tokenCount !== null || solscan.lastTxTime !== null || helius.firstTxTime !== null || helius.lastTxTime !== null)
     : (etherscan.balanceWei !== null || etherscan.txCount !== null);
   const hasDuneData = dune.tradeCount !== null || dune.totalProfitUsd !== null;
   const dataMinimal = !hasOnChainData && !hasDuneData;
