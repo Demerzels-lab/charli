@@ -1,6 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Reveal } from "./Reveal";
+import { EvidenceOrbit } from "./animations/EvidenceOrbit";
+import { XAccountIcon } from "./icons/XAccountIcon";
+import { WalletIcon } from "./icons/WalletIcon";
+import { ProjectIcon } from "./icons/ProjectIcon";
+import { AgentIcon } from "./icons/AgentIcon";
 
 const CAPABILITIES = [
   {
@@ -9,6 +16,8 @@ const CAPABILITIES = [
     inputs: "@handle",
     body: "Account age against follower growth, engagement authenticity, posting behavior, and whether this account has any crypto history at all. Returns a clear read: legit, do your own research, or red flag.",
     status: "Live",
+    Icon: XAccountIcon,
+    preview: ["verdict: LEGIT", "confidence: FIRM", "signals: 6 analyzed"],
   },
   {
     no: "II",
@@ -16,6 +25,8 @@ const CAPABILITIES = [
     inputs: "Solana · EVM address",
     body: "Behavior pulled from public chain data. Dev wallet, whale, or flipper. Past project participation and funding patterns. An interpretation layer on top of the explorer, not another raw feed.",
     status: "Live",
+    Icon: WalletIcon,
+    preview: ["classification: whale", "confidence: CONFIRMED", "signals: 5 analyzed"],
   },
   {
     no: "III",
@@ -23,20 +34,28 @@ const CAPABILITIES = [
     inputs: "name · contract · domain",
     body: "Domain age and registration, linked social accounts, team identity signals, and connected wallets, scored end to end: safe, DYOR, high risk, or likely rug. Built to be shared as a card.",
     status: "Live",
+    Icon: ProjectIcon,
+    preview: ["verdict: HIGH_RISK", "risk score: 65/100", "findings: 7 analyzed"],
   },
   {
     no: "IV",
     name: "Agent Mode",
     inputs: "free-form chat",
-    body: "Talk to CARLI directly. \u201cCheck this account before I buy.\u201d It runs the full investigation conversationally and synthesizes one answer instead of handing you ten dashboards.",
+    body: "Talk to CARLI directly. “Check this account before I buy.” It runs the full investigation conversationally and synthesizes one answer instead of handing you ten dashboards.",
     status: "Live",
+    Icon: AgentIcon,
+    preview: ["mode: conversational", "tools: 3 available", "synthesis: one answer"],
   },
 ];
 
 export function Capabilities() {
+  const [hovered, setHovered] = useState<string | null>(null);
+
   return (
-    <section id="capabilities" className="border-y border-line bg-surface py-20 md:py-28">
-      <div className="shell">
+    <section id="capabilities" className="relative border-y border-line bg-surface py-20 md:py-28">
+      <EvidenceOrbit className="absolute inset-0 hidden md:block" />
+
+      <div className="shell relative">
         <Reveal>
           <div className="mb-12 md:mb-16">
             <p className="eyebrow mb-3">The instruments</p>
@@ -54,9 +73,13 @@ export function Capabilities() {
         <div className="border-t border-ink/15">
           {CAPABILITIES.map((c) => (
             <Reveal key={c.no} delay={0.03}>
-              <article className="group grid grid-cols-1 items-start gap-4 border-b border-ink/15 py-7 md:grid-cols-12 md:gap-8 md:py-8">
-                <div className="flex items-baseline gap-4 md:col-span-4">
-                  <span className="figure text-sm font-bold text-gold-dark">
+              <article
+                className="group relative grid grid-cols-1 items-start gap-4 border-b border-ink/15 py-7 transition-colors md:grid-cols-12 md:gap-8 md:py-8 md:hover:bg-bg"
+                onMouseEnter={() => setHovered(c.no)}
+                onMouseLeave={() => setHovered(null)}
+              >
+                <div className="flex items-baseline gap-4 md:col-span-3">
+                  <span className="figure text-sm font-bold text-gold-dark transition-transform group-hover:scale-110">
                     {c.no}
                   </span>
                   <div>
@@ -69,15 +92,43 @@ export function Capabilities() {
                   </div>
                 </div>
 
-                <p className="text-pretty text-sm leading-relaxed text-ink-soft md:col-span-7">
+                <p className="text-pretty text-sm leading-relaxed text-ink-soft md:col-span-6">
                   {c.body}
                 </p>
 
-                <div className="md:col-span-1 md:text-right">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink">
-                    <span className="size-1.5 rounded-full bg-gold" aria-hidden="true" />
-                    {c.status}
-                  </span>
+                <div className="hidden items-center justify-center md:col-span-1 md:flex">
+                  <c.Icon />
+                </div>
+
+                <div className="md:col-span-2 md:text-right">
+                  <AnimatePresence mode="wait">
+                    {hovered === c.no ? (
+                      <motion.div
+                        key="preview"
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 8 }}
+                        transition={{ duration: 0.2 }}
+                        className="ml-auto inline-block border border-gold/30 bg-surface px-3 py-2 text-left font-mono text-[10px] leading-relaxed text-ink-soft md:text-right"
+                      >
+                        {c.preview.map((line) => (
+                          <div key={line}>{line}</div>
+                        ))}
+                      </motion.div>
+                    ) : (
+                      <motion.span
+                        key="status"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink"
+                      >
+                        <span className="size-1.5 rounded-full bg-gold" aria-hidden="true" />
+                        {c.status}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </div>
               </article>
             </Reveal>

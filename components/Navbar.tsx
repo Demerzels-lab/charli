@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Mark } from "./Mark";
+import Image from "next/image";
 
 const LINKS = [
   { label: "Problem", href: "#problem" },
@@ -35,7 +35,7 @@ export function Navbar() {
           className="flex items-center gap-2.5"
           aria-label="CARLI — home"
         >
-          <Mark size={26} />
+          <Image src="/logo.png" alt="" width={26} height={26} className="rounded-full" />
           <span className="text-[15px] font-extrabold uppercase tracking-[0.18em]">
             Carli
           </span>

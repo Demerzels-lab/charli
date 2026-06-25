@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Mark } from './Mark';
 
 const TABS = [
   { label: 'Agent', href: '/agent' },
@@ -22,7 +22,7 @@ export function AppNav() {
           className="flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-[0.18em] text-ink"
           aria-label="CARLI — back to home"
         >
-          <Mark size={20} />
+          <Image src="/logo.png" alt="" width={20} height={20} className="rounded-full" />
           Carli
         </Link>
 

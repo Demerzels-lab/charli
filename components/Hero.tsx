@@ -2,6 +2,9 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { WordReveal } from "./WordReveal";
+import { SignalStreaks } from "./animations/SignalStreaks";
+import { CountUp } from "./animations/CountUp";
+import { LiveDemo } from "./animations/LiveDemo";
 
 const STATS = [
   { value: "98.6%", label: "of pump.fun tokens end in a rug or dump" },
@@ -17,7 +20,8 @@ export function Hero() {
       id="top"
       className="relative overflow-hidden pt-28 pb-16 md:pt-36 md:pb-24"
     >
-      <div className="shell">
+      <SignalStreaks />
+      <div className="shell relative">
         {/* eyebrow */}
         <motion.p
           className="eyebrow mb-6"
@@ -80,6 +84,8 @@ export function Hero() {
           </a>
         </motion.div>
 
+        <LiveDemo />
+
         {/* stat bar */}
         <motion.dl
           className="mt-16 grid grid-cols-1 gap-px overflow-hidden border border-line bg-line sm:grid-cols-3"
@@ -90,7 +96,7 @@ export function Hero() {
           {STATS.map((s) => (
             <div key={s.value} className="bg-bg p-6">
               <dt className="figure text-3xl font-extrabold tracking-tight text-ink md:text-4xl">
-                {s.value}
+                <CountUp value={s.value} />
               </dt>
               <dd className="mt-2 text-[13px] leading-snug text-ink-soft">
                 {s.label}

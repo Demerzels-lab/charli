@@ -1,4 +1,4 @@
-import { Mark } from "./Mark";
+import Image from "next/image";
 
 const COLS = [
   {
@@ -27,7 +27,7 @@ export function Footer() {
         <div className="grid grid-cols-2 gap-10 md:grid-cols-4">
           <div className="col-span-2 md:col-span-2">
             <div className="flex items-center gap-2.5">
-              <Mark size={24} />
+              <Image src="/logo.png" alt="" width={24} height={24} className="rounded-full" />
               <span className="text-sm font-extrabold uppercase tracking-[0.18em]">
                 Carli
               </span>

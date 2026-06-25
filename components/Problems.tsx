@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Reveal } from "./Reveal";
+import { CountUp } from "./animations/CountUp";
 
 const PROBLEMS = [
   {
@@ -105,7 +106,7 @@ export function Problems() {
                 <div className="md:col-span-3 md:text-right">
                   <div className="inline-block border-l-2 border-gold pl-4 md:border-l-0 md:border-r-2 md:pl-0 md:pr-4">
                     <div className="figure text-3xl font-extrabold tracking-tight text-ink md:text-4xl">
-                      {p.stat}
+                      <CountUp value={p.stat} />
                     </div>
                     <div className="mt-2 max-w-[22ch] text-xs leading-snug text-ink-soft md:ml-auto">
                       {p.statLabel}

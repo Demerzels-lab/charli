@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Reveal } from "./Reveal";
+import { AsciiPattern } from "./animations/AsciiPattern";
 
 const CA = "Coming soon · $CARLI on pump.fun";
 
@@ -61,8 +62,9 @@ export function Closing() {
       </section>
 
       {/* final CTA */}
-      <section id="enter" className="py-24 text-center md:py-36">
-        <div className="shell">
+      <section id="enter" className="relative overflow-hidden py-24 text-center md:py-36">
+        <AsciiPattern className="absolute inset-0" />
+        <div className="shell relative">
           <Reveal>
             <p className="eyebrow mb-8">Run your DYOR</p>
           </Reveal>
