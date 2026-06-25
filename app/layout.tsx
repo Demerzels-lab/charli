@@ -26,6 +26,10 @@ export const metadata: Metadata = {
     "memecoin research",
   ],
   authors: [{ name: "CARLI" }],
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
   openGraph: {
     type: "website",
     url: SITE_URL,
@@ -33,6 +37,7 @@ export const metadata: Metadata = {
     description:
       "On-chain plus social intelligence, synthesized by Claude. Run your DYOR in seconds.",
     siteName: "CARLI",
+    images: [{ url: "/logo.png", width: 1254, height: 1254 }],
   },
   twitter: {
     card: "summary_large_image",
@@ -40,6 +45,7 @@ export const metadata: Metadata = {
     description:
       "On-chain plus social intelligence, synthesized by Claude. Run your DYOR in seconds.",
     creator: "@CARLI",
+    images: ["/logo.png"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: SITE_URL },

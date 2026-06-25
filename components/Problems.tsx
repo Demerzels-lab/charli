@@ -1,3 +1,7 @@
+"use client";
+
+import { useRef } from "react";
+import { motion, useScroll, useTransform } from "motion/react";
 import { Reveal } from "./Reveal";
 
 const PROBLEMS = [
@@ -35,6 +39,25 @@ const PROBLEMS = [
   },
 ];
 
+function ParallaxNumber({ no }: { no: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const y = useTransform(scrollYProgress, [0, 1], [30, -30]);
+
+  return (
+    <motion.div
+      ref={ref}
+      style={{ y }}
+      className="figure text-5xl font-extrabold leading-none text-ink/15 transition-colors group-hover:text-gold md:text-6xl"
+    >
+      {no}
+    </motion.div>
+  );
+}
+
 export function Problems() {
   return (
     <section id="problem" className="py-20 md:py-28">
@@ -64,9 +87,7 @@ export function Problems() {
               >
                 {/* number + tag */}
                 <div className="md:col-span-3">
-                  <div className="figure text-5xl font-extrabold leading-none text-ink/15 transition-colors group-hover:text-gold md:text-6xl">
-                    {p.no}
-                  </div>
+                  <ParallaxNumber no={p.no} />
                   <p className="eyebrow mt-4">{p.tag}</p>
                 </div>
 

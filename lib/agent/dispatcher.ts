@@ -8,6 +8,8 @@ import { fetchDuneWalletActivity } from '../data/dune';
 import { fetchSolsnifferRisk } from '../data/solsniffer';
 import { fetchCrtshDomainAge } from '../data/crtsh';
 import { fetchWhoisDomain } from '../data/whois';
+import { fetchDexscreenerToken } from '../data/dexscreener';
+import { fetchRugcheckReport } from '../data/rugcheck';
 import { classifyProjectInput } from '../data/input-classifier';
 import { fetchTwitterProfile } from '../data/twitter-syndication';
 import { fetchUsernameHistory } from '../data/memory-lol';
@@ -92,17 +94,31 @@ export async function dispatchInvestigation(
     const resolvedAs = classifyProjectInput(query);
     const isContract = resolvedAs === 'contract';
     const domainQuery = resolvedAs === 'domain' ? query : resolvedAs === 'name' ? `${query}.com` : null;
-    const [solsniffer, crtsh, whois] = await Promise.all([
-      isContract ? fetchSolsnifferRisk(query) : Promise.resolve({ snifScore: null, mintAuthorityRisk: null, freezeAuthorityRisk: null, holderConcentrationPct: null, auditStatus: null, isHoneypot: null }),
+    const [solsniffer, crtsh, whois, dexscreener, rugcheck] = await Promise.all([
+      isContract ? fetchSolsnifferRisk(query) : Promise.resolve({
+        snifScore: null, tokenName: null, tokenSymbol: null, tokenImg: null,
+        mintAuthorityRisk: null, freezeAuthorityRisk: null, lpBurned: null,
+        top10HoldersRisk: null, holderConcentrationPct: null, auditStatus: null,
+        isHoneypot: null, marketCap: null, deployer: null,
+        website: null, telegram: null, twitter: null, liquidityUsd: null, deployTime: null,
+      }),
       domainQuery ? fetchCrtshDomainAge(domainQuery) : Promise.resolve({ firstIssuedAt: null, certCount: null }),
       domainQuery ? fetchWhoisDomain(domainQuery) : Promise.resolve({ createdAt: null, registrar: null, ageDays: null }),
+      isContract ? fetchDexscreenerToken(query) : Promise.resolve({ tokenName: null, tokenSymbol: null, pairCreatedAt: null, website: null, twitter: null, telegram: null }),
+      isContract ? fetchRugcheckReport(query) : Promise.resolve({ score: null, mintAuthorityActive: null, freezeAuthorityActive: null, lpLockedPct: null, top10HoldersPct: null, rugged: null }),
     ]);
-    const evidence = buildProjectEvidence(query, resolvedAs, solsniffer, crtsh, whois);
+    const evidence = buildProjectEvidence(query, resolvedAs, solsniffer, crtsh, whois, dexscreener, rugcheck);
     const raw = await callLLM(PROJECT_SYSTEM_PROMPT, evidence);
     const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const partial = JSON.parse(clean) as Omit<ProjectVerdict, 'query' | 'resolvedAs'>;
     return {
       ...partial, query, resolvedAs,
+      tokenName: dexscreener.tokenName ?? solsniffer.tokenName,
+      tokenSymbol: dexscreener.tokenSymbol ?? solsniffer.tokenSymbol,
+      tokenImg: solsniffer.tokenImg,
+      marketCap: solsniffer.marketCap,
+      deployer: solsniffer.deployer,
+      liquidityUsd: solsniffer.liquidityUsd,
       domain: (whois.createdAt || whois.ageDays !== null)
         ? { ageDays: whois.ageDays, registrar: whois.registrar, createdAt: whois.createdAt }
         : undefined,

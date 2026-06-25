@@ -33,6 +33,7 @@ export function Hero() {
           <WordReveal
             text="The chain talks. CARLI listens."
             accentIndices={[3]}
+            glitchIndices={[3]}
             startDelay={0.2}
             stagger={0.09}
           />

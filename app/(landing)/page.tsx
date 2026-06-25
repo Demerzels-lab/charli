@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
+import { ScannerTicker } from "@/components/animations/ScannerTicker";
 import { Manifesto } from "@/components/Manifesto";
 import { Problems } from "@/components/Problems";
 import { Capabilities } from "@/components/Capabilities";
@@ -13,6 +14,7 @@ export default function Home() {
       <Navbar />
       <main className="relative z-base">
         <Hero />
+        <ScannerTicker />
         <Manifesto />
         <Problems />
         <Capabilities />

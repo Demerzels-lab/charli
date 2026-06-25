@@ -43,6 +43,64 @@
 }
 
 @layer utilities {
+  /* Glitch text — subtle signal-interference flicker */
+  .glitch-text {
+    display: inline-block;
+    position: relative;
+  }
+
+  .glitch-text.is-glitching {
+    animation: glitchShift 0.28s steps(2, jump-none);
+  }
+
+  @keyframes glitchShift {
+    0% {
+      transform: translateX(0);
+      filter: none;
+    }
+    20% {
+      transform: translateX(-2px);
+      filter: hue-rotate(90deg);
+    }
+    40% {
+      transform: translateX(2px);
+      color: theme("colors.gold-dark");
+    }
+    60% {
+      transform: translateX(-1px);
+      filter: none;
+    }
+    80% {
+      transform: translateX(1px);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  /* Scanner ticker — seamless horizontal scroll */
+  .ticker-track {
+    display: flex;
+    width: max-content;
+    animation: tickerRoll 40s linear infinite;
+  }
+
+  @keyframes tickerRoll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .glitch-text.is-glitching,
+    .ticker-track {
+      animation: none !important;
+    }
+  }
+
   .shell {
     @apply mx-auto w-full max-w-shell px-6 md:px-10;
   }

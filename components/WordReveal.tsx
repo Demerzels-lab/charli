@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { GlitchText } from "./animations/GlitchText";
 
 interface WordRevealProps {
   text: string;
@@ -11,6 +12,8 @@ interface WordRevealProps {
   stagger?: number;
   /** Optional set of words (by index) to paint in gold. */
   accentIndices?: number[];
+  /** Optional set of words (by index) to apply the signal-glitch flicker. */
+  glitchIndices?: number[];
 }
 
 /**
@@ -23,10 +26,12 @@ export function WordReveal({
   startDelay = 0.15,
   stagger = 0.08,
   accentIndices = [],
+  glitchIndices = [],
 }: WordRevealProps) {
   const reduce = useReducedMotion();
   const words = text.split(" ");
   const accent = new Set(accentIndices);
+  const glitch = new Set(glitchIndices);
 
   if (reduce) {
     return (
@@ -59,7 +64,7 @@ export function WordReveal({
               delay: startDelay + i * stagger,
             }}
           >
-            {word}
+            {glitch.has(i) ? <GlitchText text={word} /> : word}
           </motion.span>
           {i < words.length - 1 ? "\u00A0" : ""}
         </span>

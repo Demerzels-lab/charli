@@ -80,9 +80,6 @@ export async function fetchSolsnifferRisk(contractAddress: string): Promise<Sols
     };
   } catch (err) {
     console.error('[solsniffer] error:', (err as Error).message);
-    return {
-      snifScore: null, mintAuthorityRisk: null, freezeAuthorityRisk: null,
-      holderConcentrationPct: null, auditStatus: null, isHoneypot: null,
-    };
+    return EMPTY;
   }
 }

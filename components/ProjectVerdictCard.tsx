@@ -50,10 +50,10 @@ export function ProjectVerdictCard({ verdict }: Props) {
       <p className="text-sm text-ink text-pretty">{verdict.summary}</p>
 
       {/* token stats */}
-      {(verdict.marketCap !== null || verdict.liquidityUsd !== null) && (
+      {(verdict.marketCap != null || verdict.liquidityUsd != null) && (
         <div className="grid grid-cols-2 gap-2 text-xs tabular-nums text-ink-soft border-t border-line pt-3">
-          {verdict.marketCap !== null && <span>Market cap: ${verdict.marketCap.toLocaleString()}</span>}
-          {verdict.liquidityUsd !== null && <span>Liquidity: ${verdict.liquidityUsd.toFixed(0)}</span>}
+          {verdict.marketCap != null && <span>Market cap: ${verdict.marketCap.toLocaleString()}</span>}
+          {verdict.liquidityUsd != null && <span>Liquidity: ${verdict.liquidityUsd.toFixed(0)}</span>}
           {verdict.deployer && <span className="col-span-2 font-mono truncate">Deployer: {verdict.deployer}</span>}
         </div>
       )}

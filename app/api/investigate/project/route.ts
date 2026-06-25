@@ -8,6 +8,8 @@ import { classifyProjectInput } from '@/lib/data/input-classifier';
 import { fetchSolsnifferRisk } from '@/lib/data/solsniffer';
 import { fetchCrtshDomainAge } from '@/lib/data/crtsh';
 import { fetchWhoisDomain } from '@/lib/data/whois';
+import { fetchDexscreenerToken } from '@/lib/data/dexscreener';
+import { fetchRugcheckReport } from '@/lib/data/rugcheck';
 import { PROJECT_SYSTEM_PROMPT, buildProjectEvidence } from '@/lib/prompts/project';
 
 function getIp(req: NextRequest): string {
@@ -58,7 +60,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const isContract = resolvedAs === 'contract';
   const domainQuery = resolvedAs === 'domain' ? query : resolvedAs === 'name' ? `${query}.com` : null;
 
-  const [solsniffer, crtsh, whois] = await Promise.all([
+  const [solsniffer, crtsh, whois, dexscreener, rugcheck] = await Promise.all([
     isContract ? fetchSolsnifferRisk(query) : Promise.resolve({
       snifScore: null, tokenName: null, tokenSymbol: null, tokenImg: null,
       mintAuthorityRisk: null, freezeAuthorityRisk: null, lpBurned: null,
@@ -68,9 +70,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }),
     domainQuery ? fetchCrtshDomainAge(domainQuery) : Promise.resolve({ firstIssuedAt: null, certCount: null }),
     domainQuery ? fetchWhoisDomain(domainQuery) : Promise.resolve({ createdAt: null, registrar: null, ageDays: null }),
+    isContract ? fetchDexscreenerToken(query) : Promise.resolve({ tokenName: null, tokenSymbol: null, pairCreatedAt: null, website: null, twitter: null, telegram: null }),
+    isContract ? fetchRugcheckReport(query) : Promise.resolve({ score: null, mintAuthorityActive: null, freezeAuthorityActive: null, lpLockedPct: null, top10HoldersPct: null, rugged: null }),
   ]);
 
-  const evidence = buildProjectEvidence(query, resolvedAs, solsniffer, crtsh, whois);
+  const evidence = buildProjectEvidence(query, resolvedAs, solsniffer, crtsh, whois, dexscreener, rugcheck);
   let partialVerdict: Omit<ProjectVerdict, 'query' | 'resolvedAs'>;
   try {
     const raw = await callLLM(PROJECT_SYSTEM_PROMPT, evidence);
@@ -89,8 +93,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     ...partialVerdict,
     query,
     resolvedAs,
-    tokenName: solsniffer.tokenName,
-    tokenSymbol: solsniffer.tokenSymbol,
+    tokenName: dexscreener.tokenName ?? solsniffer.tokenName,
+    tokenSymbol: dexscreener.tokenSymbol ?? solsniffer.tokenSymbol,
     tokenImg: solsniffer.tokenImg,
     marketCap: solsniffer.marketCap,
     deployer: solsniffer.deployer,
@@ -98,10 +102,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     domain: (whois.createdAt || whois.ageDays !== null)
       ? { ageDays: whois.ageDays, registrar: whois.registrar, createdAt: whois.createdAt }
       : undefined,
-    socials: (solsniffer.website || solsniffer.telegram || solsniffer.twitter)
-      ? { site: solsniffer.website ?? undefined, telegram: solsniffer.telegram ?? undefined, x: solsniffer.twitter ?? undefined }
+    socials: (solsniffer.website || solsniffer.telegram || solsniffer.twitter || dexscreener.website || dexscreener.telegram || dexscreener.twitter)
+      ? {
+          site: dexscreener.website ?? solsniffer.website ?? undefined,
+          telegram: dexscreener.telegram ?? solsniffer.telegram ?? undefined,
+          x: dexscreener.twitter ?? solsniffer.twitter ?? undefined,
+        }
       : partialVerdict.socials,
   };
+
+  // Deterministic override — LP locked % is a hard number from Rugcheck;
+  // the LLM sometimes conflates it with the unrelated "LP burned" flag.
+  if (isContract && rugcheck.lpLockedPct !== null) {
+    const lpFindingIdx = verdict.findings.findIndex(f =>
+      f.label.toLowerCase().includes('lp locked') || f.label.toLowerCase().includes('liquidity pool')
+    );
+    const direction: 'ok' | 'warn' | 'bad' =
+      rugcheck.lpLockedPct >= 80 ? 'ok' : rugcheck.lpLockedPct >= 30 ? 'warn' : 'bad';
+    const lpFinding = {
+      label: 'LP Locked %',
+      detail: `${rugcheck.lpLockedPct.toFixed(2)}% of liquidity is locked (Rugcheck).`,
+      direction,
+      confidence: 'CONFIRMED' as const,
+    };
+    if (lpFindingIdx >= 0) verdict.findings[lpFindingIdx] = lpFinding;
+    else verdict.findings.push(lpFinding);
+  }
 
   await setCache(cacheKey, verdict);
 
