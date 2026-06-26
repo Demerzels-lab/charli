@@ -1,6 +1,5 @@
 // lib/prompts/wallet.ts
 import type { Chain } from '../types';
-import type { SolscanWalletData } from '../data/solscan';
 import type { HeliusWalletData } from '../data/helius';
 import type { EtherscanWalletData } from '../data/etherscan';
 import type { DuneWalletData } from '../data/dune';
@@ -22,10 +21,24 @@ Output this exact shape:
   ]
 }
 
+Scoring rules:
+- Wallet age < 7 days → +20 risk, flag "Wallet baru (< 7 hari)"
+- Funded by known flagged cluster → +35 risk
+- Average hold time < 1 hour → +15 risk, flag "Pola flipper ekstrem"
+- Balance < $1 and age < 14 days → +10 risk
+- Age > 180 days → -10 risk (trust signal)
+- Tx count > 500 → -5 risk (organic activity)
+- Normal DeFi usage (Jupiter, Raydium, Uniswap) → -5 risk
+
+Confidence:
+- TENTATIVE: wallet baru, transaksi sedikit
+- FIRM: beberapa sinyal saling menguatkan
+- CONFIRMED: bukti on-chain langsung dan jelas
+
 Rules:
-- CLEAN: no red flags, normal activity
-- WATCH: some suspicious signals but not conclusive
-- FLAGGED: strong evidence of scam/rug/manipulation
+- CLEAN: score ≤ 5, no red flags
+- WATCH: score 6-30, some suspicious signals
+- FLAGGED: score > 30, strong evidence of scam/rug
 - If data is missing (null), lower confidence, don't fabricate
 - signals array: 3-6 items, cover the most important findings
 - summary: 1-2 sentences max, direct`;
@@ -33,33 +46,42 @@ Rules:
 export function buildWalletEvidence(
   address: string,
   chain: Chain,
-  solscan: SolscanWalletData,
   helius: HeliusWalletData,
   etherscan: EtherscanWalletData,
-  dune: DuneWalletData
+  dune: DuneWalletData,
 ): string {
-  const balance = chain === 'solana'
-    ? `${solscan.balanceSol ?? 'unknown'} SOL (~$${solscan.balanceUsd ?? 'unknown'} USD)`
-    : `(EVM — balance in wei: ${etherscan.balanceWei ?? 'unknown'})`;
+  if (chain === 'solana') {
+    const parts = [
+      `Wallet address: ${address}`,
+      `Chain: Solana`,
+      `Balance: ${helius.balanceSol !== null ? `${helius.balanceSol.toFixed(4)} SOL (~$${helius.balanceUsd ?? 'unknown'} USD)` : 'unknown'}`,
+      `Token holdings: ${helius.tokenHoldings ? `${helius.tokenHoldings.length} SPL tokens` : 'unknown'}`,
+      `First transaction: ${helius.firstTxTime ?? 'unknown'}`,
+      `Last active: ${helius.lastTxTime ?? 'unknown'}`,
+      `Transaction count: ${helius.txCount !== null ? `~${helius.txCount}+` : 'unknown'}`,
+      `Funded by: ${helius.fundedBy ?? 'unknown'}`,
+    ];
 
-  const firstSeen = chain === 'solana' ? solscan.firstTxTime : etherscan.firstTxTime;
-  const lastActive = chain === 'solana'
-    ? (solscan.lastTxTime ?? helius.lastTxTime)
-    : etherscan.lastTxTime;
+    // Pump.fun enrichment — only show if data exists
+    if (dune.tradeCount !== null || dune.totalProfitUsd !== null) {
+      parts.push(`Pump.fun trades: ${dune.tradeCount ?? 'unknown'}`);
+      parts.push(`Pump.fun profit: $${dune.totalProfitUsd ?? 'unknown'} USD`);
+    }
 
-  const tokenHoldings = chain === 'solana' && solscan.tokenCount !== null
-    ? `${solscan.tokenCount} distinct SPL token${solscan.tokenCount === 1 ? '' : 's'} held`
-    : 'unknown';
+    return parts.join('\n');
+  }
 
-  return `
-Wallet address: ${address}
-Chain: ${chain}
-Balance: ${balance}
-Token holdings: ${tokenHoldings}
-First transaction: ${firstSeen ?? 'unknown'}
-Last active: ${lastActive ?? 'unknown'}
-Pump.fun trade count: ${dune.tradeCount ?? 'no data'}
-Pump.fun total profit: $${dune.totalProfitUsd ?? 'no data'} USD
-Suggested classification from trading patterns: ${dune.classification ?? 'unknown'}
-`.trim();
+  // EVM
+  const parts = [
+    `Wallet address: ${address}`,
+    `Chain: EVM (Ethereum)`,
+    `Balance: ${etherscan.balanceWei !== null ? `${etherscan.balanceWei} wei` : 'unknown'}`,
+    `ERC-20 tokens: ${etherscan.erc20Tokens ? `${etherscan.erc20Tokens.length} tokens` : 'unknown'}`,
+    `First transaction: ${etherscan.firstTxTime ?? 'unknown'}`,
+    `Last active: ${etherscan.lastTxTime ?? 'unknown'}`,
+    `Transaction count: ${etherscan.txCount ?? 'unknown'}`,
+    `Funded by: ${etherscan.fundedBy ?? 'unknown'}`,
+  ];
+
+  return parts.join('\n');
 }

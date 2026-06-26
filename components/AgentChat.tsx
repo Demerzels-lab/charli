@@ -10,13 +10,15 @@ import { XVerdictCard } from './XVerdictCard';
 
 function CarliAvatar({ size = 32 }: { size?: number }) {
   return (
-    <Image
-      src="/logo.png"
-      alt="CARLI"
-      width={size}
-      height={size}
-      className="shrink-0 rounded-full border border-line bg-surface object-cover"
-    />
+    <div className="shrink-0 relative" style={{ width: size, height: size }}>
+      <Image
+        src="/logo.png"
+        alt="CARLI"
+        fill
+        className="rounded-full border border-line bg-surface object-cover"
+        sizes={`${size}px`}
+      />
+    </div>
   );
 }
 
@@ -145,38 +147,47 @@ export function AgentChat() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-w-full">
       {/* messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-5 py-4 pr-1">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden space-y-5 py-4 pr-1">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
             <CarliAvatar size={64} />
-            <p className="text-sm font-semibold text-ink">CARLI is ready.</p>
-            <p className="text-sm text-ink-soft">Paste a wallet, X handle, or project name.</p>
+            <div>
+              <p className="text-sm font-semibold text-ink">CARLI is ready.</p>
+              <p className="text-xs text-ink-soft mt-1 max-w-xs mx-auto">
+                Paste anything — a wallet, an X handle, a contract address, or just describe what you want to check.
+              </p>
+            </div>
             <div className="flex flex-wrap justify-center gap-2">
-              {['0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', '@elonmusk', 'pump.fun'].map(hint => (
+              {[
+                { label: 'Check a wallet', hint: '3oiTazAuUTfoVP3fvPoTjRKAYLf1YkiTjR6WfTDZUiVw' },
+                { label: 'Investigate X account', hint: '@elonmusk' },
+                { label: 'Check a project', hint: 'pump.fun' },
+              ].map(({ label, hint }) => (
                 <button
                   key={hint}
                   onClick={() => setInput(hint)}
                   className="text-xs border border-line px-3 py-1.5 text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm"
                 >
-                  {hint}
+                  {label}
                 </button>
               ))}
             </div>
+            <p className="text-[11px] text-ink-soft/60 mt-2">No logins. No subscriptions. Public data only.</p>
           </div>
         )}
 
         {messages.map((msg, i) => (
-          <div key={i} className={msg.type === 'user' ? 'flex justify-end' : 'space-y-2'}>
+          <div key={i} className={msg.type === 'user' ? 'flex justify-end' : ''}>
             {msg.type === 'user' ? (
-              <div className="max-w-sm bg-ink text-bg text-sm px-3 py-2 rounded-sm leading-relaxed">
+              <div className="max-w-[85%] bg-ink text-bg text-sm px-3 py-2 rounded-sm leading-relaxed break-all">
                 {msg.content}
               </div>
             ) : (
-              <div className="flex gap-2.5">
+              <div className="flex gap-2.5 max-w-full">
                 <CarliAvatar />
-                <div className="space-y-2 max-w-xl flex-1">
+                <div className="space-y-2 flex-1 min-w-0 max-w-full">
                   <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">CARLI</p>
                   {msg.tools.length > 0 && (
                     <div className="flex flex-wrap gap-1">
@@ -185,18 +196,45 @@ export function AgentChat() {
                       ))}
                     </div>
                   )}
-                  {msg.verdict && (
-                    <div>
-                      {isWalletVerdict(msg.verdict) && <WalletVerdictCard verdict={msg.verdict} />}
-                      {isProjectVerdict(msg.verdict) && <ProjectVerdictCard verdict={msg.verdict} />}
-                      {!isWalletVerdict(msg.verdict) && !isProjectVerdict(msg.verdict) && (
-                        <XVerdictCard verdict={msg.verdict as XAccountVerdict} />
+                  {msg.verdict && (() => {
+                    const v = msg.verdict;
+                    return (
+                    <div className="space-y-3">
+                      {isWalletVerdict(v) && <WalletVerdictCard verdict={v} />}
+                      {isProjectVerdict(v) && <ProjectVerdictCard verdict={v} />}
+                      {!isWalletVerdict(v) && !isProjectVerdict(v) && (
+                        <XVerdictCard verdict={v as XAccountVerdict} />
                       )}
+                      {/* Follow-up suggestion chips */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {isWalletVerdict(v) && v.linkedProjects.length > 0 && (
+                          <button
+                            onClick={() => setInput(`Investigate ${v.linkedProjects[0].name}`)}
+                            className="text-xs border border-line px-2.5 py-1 text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm"
+                          >
+                            Investigate linked project →
+                          </button>
+                        )}
+                        {isProjectVerdict(v) && v.deployer && (
+                          <button
+                            onClick={() => setInput(v.deployer!)}
+                            className="text-xs border border-line px-2.5 py-1 text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm"
+                          >
+                            Check deployer wallet →
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setInput(`Why ${isWalletVerdict(v) ? v.level : isProjectVerdict(v) ? v.level : (v as XAccountVerdict).level}?`)}
+                          className="text-xs border border-line px-2.5 py-1 text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm"
+                        >
+                          Why this verdict?
+                        </button>
+                      </div>
                     </div>
-                  )}
+                    );
+                  })()}
                   {msg.content ? (
-                    <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">
-                      {cleanText(msg.content)}
+                    <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap break-words">
                     </p>
                   ) : msg.tools.length === 0 && !msg.verdict ? (
                     <div className="flex items-center gap-1.5 text-sm text-ink-soft">

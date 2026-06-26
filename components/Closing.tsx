@@ -79,6 +79,7 @@ export function Closing() {
               Paste an account, a wallet, or a project. Get a verdict in seconds.
               The trail is already there. CARLI just reads it.
             </p>
+            <p className="mt-3 text-xs text-ink-soft/70 tracking-wide">No logins. No subscriptions. Public data only.</p>
           </Reveal>
           <Reveal delay={0.15}>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">

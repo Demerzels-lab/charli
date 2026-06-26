@@ -29,7 +29,7 @@ export function Hero() {
           animate={{ opacity: 1, transform: "translateY(0px)" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          The crypto OSINT agent · 2026
+          Open-Source Intelligence · Crypto · 2026
         </motion.p>
 
         {/* headline — word by word */}
@@ -54,11 +54,13 @@ export function Hero() {
             Every wallet, every account, every launch leaves a trail.
           </p>
           <p className="mt-2">
-            CARLI pulls the on-chain history and the social signals together,
-            then lets Claude read the story behind them. The research you used to
-            do across ten tabs, in one answer.
+            CARLI is an OSINT agent. It reads public records the way a field analyst
+            would — on-chain transactions, domain registrations, account histories,
+            social signals — then lets Claude connect what they mean.
           </p>
         </motion.div>
+
+        <p className="mt-4 text-xs text-ink-soft/70 tracking-wide">No logins. No subscriptions. Public data only.</p>
 
         {/* CTAs */}
         <motion.div

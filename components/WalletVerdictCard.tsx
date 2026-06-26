@@ -2,70 +2,104 @@
 'use client';
 
 import type { WalletVerdict } from '@/lib/types';
-
-const LEVEL_STYLES: Record<WalletVerdict['level'], string> = {
-  CLEAN: 'text-green-700 bg-green-50 border-green-200',
-  WATCH: 'text-yellow-700 bg-yellow-50 border-yellow-200',
-  FLAGGED: 'text-red-700 bg-red-50 border-red-200',
-  UNVERIFIABLE: 'text-ink-soft bg-surface border-line',
-};
-
-const DIRECTION_STYLES = {
-  ok: 'text-green-600',
-  warn: 'text-yellow-600',
-  bad: 'text-red-600',
-};
-
-const DIRECTION_ICON = { ok: '✓', warn: '⚠', bad: '✗' };
+import { VerdictSection, DataRow, VerdictBadge, ConfidencePill, SignalRow } from './verdict/VerdictPrimitives';
 
 type Props = { verdict: WalletVerdict };
 
 export function WalletVerdictCard({ verdict }: Props) {
+  const ageDays = verdict.firstSeen
+    ? Math.floor((Date.now() - new Date(verdict.firstSeen).getTime()) / 86_400_000)
+    : null;
+
   return (
-    <div className="border border-line rounded-sm bg-surface p-6 space-y-4">
+    <div className="border border-line rounded-sm bg-surface p-6 space-y-5 max-w-full">
+      {/* [1] HEADER — target identity + verdict badge */}
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="space-y-1 min-w-0">
           <p className="text-xs text-ink-soft font-mono break-all">{verdict.address}</p>
-          <p className="text-xs text-ink-soft uppercase tracking-widest mt-1">
-            {verdict.chain} · {verdict.classification}
-          </p>
+          <div className="flex items-center gap-2 text-xs text-ink-soft">
+            <span className="uppercase tracking-widest">{verdict.chain}</span>
+            <span className="text-line">·</span>
+            <span className="capitalize">{verdict.classification}</span>
+          </div>
         </div>
-        <span className={`text-xs font-semibold px-2 py-1 border rounded-sm uppercase tracking-widest whitespace-nowrap ${LEVEL_STYLES[verdict.level]}`}>
-          {verdict.level}
-        </span>
+        <VerdictBadge level={verdict.level} />
       </div>
 
-      <p className="text-sm text-ink text-pretty">{verdict.summary}</p>
+      {/* [2] SUMMARY — 1-2 sentences, di ATAS */}
+      <p className="text-sm text-ink text-pretty leading-relaxed">{verdict.summary}</p>
+
+      {/* [3] META ROW — confidence */}
+      <div className="flex items-center gap-2">
+        <ConfidencePill level={verdict.confidence} />
+        {ageDays !== null && (
+          <span className="text-[11px] text-ink-soft tabular-nums">{ageDays} days old</span>
+        )}
+      </div>
 
       {verdict.level === 'UNVERIFIABLE' && (
         <div className="text-xs text-ink-soft border border-line rounded-sm bg-bg px-3 py-2">
-          No on-chain data retrieved. Configure API keys (Solscan/Helius/Etherscan/Dune) to enable full wallet analysis.
+          No on-chain data retrieved. Configure Helius (Solana) or Etherscan (EVM) API keys to enable full analysis.
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 text-xs tabular-nums text-ink-soft">
+      {/* [4] DATA SECTIONS — grouped, not a flat list */}
+
+      {/* IDENTITY */}
+      <VerdictSection label="Identity">
         {verdict.balanceUsd !== null && (
-          <span>Balance: ${verdict.balanceUsd.toLocaleString()}</span>
+          <DataRow label="Balance" icon="neutral">${verdict.balanceUsd.toLocaleString()}</DataRow>
         )}
         {verdict.firstSeen && (
-          <span>First seen: {new Date(verdict.firstSeen).toLocaleDateString()}</span>
+          <DataRow label="Created" icon="neutral">
+            {new Date(verdict.firstSeen).toLocaleDateString()} {ageDays !== null && `(${ageDays}d ago)`}
+          </DataRow>
         )}
         {verdict.lastActive && (
-          <span>Last active: {new Date(verdict.lastActive).toLocaleDateString()}</span>
+          <DataRow label="Last active" icon="neutral">
+            {new Date(verdict.lastActive).toLocaleDateString()}
+          </DataRow>
         )}
-        <span>Confidence: {verdict.confidence}</span>
-      </div>
+      </VerdictSection>
 
-      <div className="space-y-1 border-t border-line pt-4">
-        {verdict.signals.map((signal, i) => (
-          <div key={i} className="flex items-start gap-2 text-sm">
-            <span className={`w-4 shrink-0 font-mono ${DIRECTION_STYLES[signal.direction]}`}>
-              {DIRECTION_ICON[signal.direction]}
-            </span>
-            <span className="text-ink-soft">{signal.label}:</span>
-            <span className="text-ink">{signal.value}</span>
-          </div>
-        ))}
+      {/* LINKED PROJECTS */}
+      {verdict.linkedProjects.length > 0 && (
+        <VerdictSection label="Linked Projects">
+          {verdict.linkedProjects.map((p, i) => (
+            <DataRow key={i} label={p.role} icon="neutral">
+              {p.name} {p.note && `— ${p.note}`}
+            </DataRow>
+          ))}
+        </VerdictSection>
+      )}
+
+      {/* [5] SIGNALS */}
+      {verdict.signals.length > 0 && (
+        <VerdictSection label="Signals">
+          {verdict.signals.map((s, i) => (
+            <SignalRow key={i} label={s.label} value={s.value} direction={s.direction} />
+          ))}
+        </VerdictSection>
+      )}
+
+      {/* [6] CROSS-LINKS */}
+      <div className="flex flex-wrap gap-2 pt-2 border-t border-line">
+        {verdict.linkedProjects.length > 0 && (
+          <a
+            href={`/project?query=${encodeURIComponent(verdict.linkedProjects[0].name)}`}
+            className="text-xs border border-line px-3 py-1.5 text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm"
+          >
+            Investigate linked project →
+          </a>
+        )}
+        {verdict.address && (
+          <a
+            href={`/wallet?address=${encodeURIComponent(verdict.address)}`}
+            className="text-xs border border-line px-3 py-1.5 text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm"
+          >
+            Who funded this wallet →
+          </a>
+        )}
       </div>
     </div>
   );

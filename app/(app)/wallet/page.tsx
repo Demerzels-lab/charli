@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { ApiResponse, WalletVerdict } from '@/lib/types';
 import { WalletVerdictCard } from '@/components/WalletVerdictCard';
 import { RateLimitBanner } from '@/components/RateLimitBanner';
+import { InvestigationLoader } from '@/components/InvestigationLoader';
 
 export default function WalletPage() {
   const [address, setAddress] = useState('');
@@ -58,10 +59,11 @@ export default function WalletPage() {
             disabled={loading || !address.trim()}
             className="w-full bg-ink text-bg text-sm font-semibold py-2 rounded-sm disabled:opacity-40 transition-opacity"
           >
-            {loading ? 'Investigating…' : 'Investigate'}
+            {loading ? 'Investigating…' : 'Run Investigation'}
           </button>
         </form>
 
+        {loading && <InvestigationLoader type="wallet" />}
         {result && (
           <div className="space-y-3">
             {result.ok ? (

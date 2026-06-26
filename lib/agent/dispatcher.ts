@@ -1,7 +1,6 @@
 // lib/agent/dispatcher.ts
 import { callLLM } from '../openrouter';
 import { detectChain } from '../data/chain-detect';
-import { fetchSolscanWallet } from '../data/solscan';
 import { fetchHeliusWallet } from '../data/helius';
 import { fetchEtherscanWallet } from '../data/etherscan';
 import { fetchDuneWalletActivity } from '../data/dune';
@@ -62,28 +61,28 @@ export async function dispatchInvestigation(
     const chain = detectChain(address);
     if (!chain) return null;
 
-    const [solscan, helius, etherscan, dune] = await Promise.all([
-      chain === 'solana' ? fetchSolscanWallet(address) : Promise.resolve({ balanceSol: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null, tokenCount: null }),
-      chain === 'solana' ? fetchHeliusWallet(address) : Promise.resolve({ balanceUsd: null, firstTxTime: null, lastTxTime: null }),
-      chain === 'evm' ? fetchEtherscanWallet(address) : Promise.resolve({ balanceWei: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null }),
+    // Primary data sources: Helius (Solana), Etherscan (EVM). Dune = enrichment only.
+    const [helius, etherscan, dune] = await Promise.all([
+      chain === 'solana' ? fetchHeliusWallet(address) : Promise.resolve({ balanceSol: null, balanceUsd: null, tokenHoldings: null, firstTxTime: null, lastTxTime: null, txCount: null, fundedBy: null, fundedDaysAgo: null }),
+      chain === 'evm' ? fetchEtherscanWallet(address) : Promise.resolve({ balanceWei: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null, fundedBy: null, fundedDaysAgo: null, erc20Tokens: null }),
       fetchDuneWalletActivity(address),
     ]);
+
     const hasOnChainData = chain === 'solana'
-      ? (solscan.balanceSol !== null || solscan.tokenCount !== null || solscan.lastTxTime !== null || helius.firstTxTime !== null || helius.lastTxTime !== null)
+      ? (helius.balanceSol !== null || helius.lastTxTime !== null || helius.firstTxTime !== null)
       : (etherscan.balanceWei !== null || etherscan.txCount !== null);
-    const hasDuneData = dune.tradeCount !== null || dune.totalProfitUsd !== null;
-    if (!hasOnChainData && !hasDuneData) {
+    if (!hasOnChainData) {
       return {
         address, chain,
         level: 'UNVERIFIABLE' as const,
         confidence: 'UNKNOWN' as const,
         classification: 'fresh' as const,
-        summary: 'No on-chain data could be retrieved — API keys not configured. Verdict is UNVERIFIABLE.',
+        summary: 'No on-chain data could be retrieved — API keys not configured or address invalid. Verdict is UNVERIFIABLE.',
         balanceUsd: null, firstSeen: null, lastActive: null, linkedProjects: [],
         signals: [{ label: 'Data sources', value: 'No blockchain API keys configured', direction: 'warn' as const }],
       };
     }
-    const evidence = buildWalletEvidence(address, chain, solscan, helius, etherscan, dune);
+    const evidence = buildWalletEvidence(address, chain, helius, etherscan, dune);
     const raw = await callLLM(WALLET_SYSTEM_PROMPT, evidence);
     const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const parsed = JSON.parse(clean) as Omit<WalletVerdict, 'address' | 'chain'>;
@@ -142,12 +141,20 @@ export async function dispatchInvestigation(
       twitter: twitterResult.source as DataSourceStatus,
       memoryLol: memoryAvailable ? 'available' : 'no_data',
     };
+    const ageDays = twitterResult.data?.accountAgeDays ?? null;
+    const followers = twitterResult.data?.followers ?? null;
+    const followerRate = followers !== null && ageDays !== null && ageDays > 0
+      ? Math.round((followers / ageDays) * 10) / 10
+      : null;
     const baseMetrics = {
-      accountAgeDays: twitterResult.data?.accountAgeDays ?? null,
-      followers: twitterResult.data?.followers ?? null,
+      accountAgeDays: ageDays,
+      followers,
       following: twitterResult.data?.following ?? null,
+      followerGrowthRate: followerRate,
+      engagementRate: null,
       usernameChanges: memoryAvailable ? memory.totalChanges : null,
       firstCryptoMentionDays: null,
+      verification: twitterResult.data?.isVerified ? 'Legacy' : twitterResult.data?.isBlueVerified ? 'Blue' : null,
     };
     const displayName = twitterResult.data?.displayName ?? null;
     const isVerified = (twitterResult.data?.isVerified || twitterResult.data?.isBlueVerified) ?? false;

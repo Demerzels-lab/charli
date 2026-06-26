@@ -2,109 +2,128 @@
 'use client';
 
 import type { ProjectVerdict } from '@/lib/types';
-
-const LEVEL_STYLES: Record<ProjectVerdict['level'], string> = {
-  SAFE: 'text-green-700 bg-green-50 border-green-200',
-  DYOR: 'text-yellow-700 bg-yellow-50 border-yellow-200',
-  HIGH_RISK: 'text-orange-700 bg-orange-50 border-orange-200',
-  LIKELY_RUG: 'text-red-700 bg-red-50 border-red-200',
-};
-
-const DIRECTION_STYLES = {
-  ok: 'text-green-600',
-  warn: 'text-yellow-600',
-  bad: 'text-red-600',
-};
-
-const DIRECTION_ICON = { ok: '✓', warn: '⚠', bad: '✗' };
+import { VerdictSection, DataRow, VerdictBadge, ConfidencePill, SignalRow } from './verdict/VerdictPrimitives';
 
 type Props = { verdict: ProjectVerdict };
 
 export function ProjectVerdictCard({ verdict }: Props) {
   return (
-    <div className="border border-line rounded-sm bg-surface p-6 space-y-4">
+    <div className="border border-line rounded-sm bg-surface p-6 space-y-5 max-w-full">
+      {/* [1] HEADER — target identity + verdict badge */}
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="space-y-1 min-w-0">
           {verdict.tokenName ? (
             <>
-              <p className="text-sm font-semibold text-ink">{verdict.tokenName} {verdict.tokenSymbol ? `(${verdict.tokenSymbol})` : ''}</p>
-              <p className="text-xs text-ink-soft font-mono break-all mt-0.5">{verdict.query}</p>
+              <p className="text-sm font-semibold text-ink">
+                {verdict.tokenName} {verdict.tokenSymbol ? `(${verdict.tokenSymbol})` : ''}
+              </p>
+              <p className="text-xs text-ink-soft font-mono break-all">{verdict.query}</p>
             </>
           ) : (
             <p className="text-sm font-semibold text-ink break-all">{verdict.query}</p>
           )}
-          <p className="text-xs text-ink-soft uppercase tracking-widest mt-1">
-            {verdict.resolvedAs}
-          </p>
+          <p className="text-xs text-ink-soft uppercase tracking-widest">{verdict.resolvedAs}</p>
         </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className={`text-xs font-semibold px-2 py-1 border rounded-sm uppercase tracking-widest whitespace-nowrap ${LEVEL_STYLES[verdict.level]}`}>
-            {verdict.level.replace('_', ' ')}
-          </span>
-          <span className="text-xs tabular-nums text-ink-soft">
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <VerdictBadge level={verdict.level} />
+          <span className="text-xs tabular-nums text-ink-soft font-semibold">
             Risk: {verdict.riskScore}/100
           </span>
         </div>
       </div>
 
-      <p className="text-sm text-ink text-pretty">{verdict.summary}</p>
+      {/* [2] SUMMARY — di ATAS */}
+      <p className="text-sm text-ink text-pretty leading-relaxed">{verdict.summary}</p>
 
-      {/* token stats */}
-      {(verdict.marketCap != null || verdict.liquidityUsd != null) && (
-        <div className="grid grid-cols-2 gap-2 text-xs tabular-nums text-ink-soft border-t border-line pt-3">
-          {verdict.marketCap != null && <span>Market cap: ${verdict.marketCap.toLocaleString()}</span>}
-          {verdict.liquidityUsd != null && <span>Liquidity: ${verdict.liquidityUsd.toFixed(0)}</span>}
-          {verdict.deployer && <span className="col-span-2 font-mono truncate">Deployer: {verdict.deployer}</span>}
-        </div>
-      )}
+      {/* [3] META */}
+      <div className="flex items-center gap-2">
+        <ConfidencePill level={verdict.confidence} />
+      </div>
 
-      {/* socials */}
+      {/* [4] DATA SECTIONS */}
+
+      {/* TOKEN IDENTITY */}
+      <VerdictSection label="Token Identity">
+        {verdict.marketCap != null && (
+          <DataRow label="Market cap" icon="neutral">${verdict.marketCap.toLocaleString()}</DataRow>
+        )}
+        {verdict.liquidityUsd != null && (
+          <DataRow label="Liquidity" icon="neutral">${verdict.liquidityUsd.toFixed(0)}</DataRow>
+        )}
+        {verdict.deployer && (
+          <DataRow label="Deployer" icon="neutral">
+            <span className="font-mono text-xs break-all">{verdict.deployer}</span>
+          </DataRow>
+        )}
+      </VerdictSection>
+
+      {/* SOCIALS */}
       {verdict.socials && (verdict.socials.site || verdict.socials.telegram || verdict.socials.x) && (
-        <div className="flex flex-wrap gap-3 text-xs text-ink-soft border-t border-line pt-3">
-          {verdict.socials.site && <span>Web: {verdict.socials.site}</span>}
-          {verdict.socials.telegram && <span>TG: @{verdict.socials.telegram}</span>}
-          {verdict.socials.x && <span>X: {verdict.socials.x}</span>}
-        </div>
+        <VerdictSection label="Social Presence">
+          {verdict.socials.x && <DataRow label="X / Twitter" icon="neutral">{verdict.socials.x}</DataRow>}
+          {verdict.socials.telegram && <DataRow label="Telegram" icon="neutral">@{verdict.socials.telegram}</DataRow>}
+          {verdict.socials.site && <DataRow label="Website" icon="neutral">{verdict.socials.site}</DataRow>}
+        </VerdictSection>
       )}
 
+      {/* DOMAIN INTEL */}
       {verdict.domain && (
-        <div className="text-xs tabular-nums text-ink-soft space-y-0.5 border-t border-line pt-3">
+        <VerdictSection label="Domain Intel">
           {verdict.domain.ageDays !== null && (
-            <p>Domain age: {verdict.domain.ageDays} days</p>
+            <DataRow label="Domain age" icon={verdict.domain.ageDays < 7 ? 'bad' : verdict.domain.ageDays < 30 ? 'warn' : 'ok'}>
+              {verdict.domain.ageDays} days
+            </DataRow>
           )}
-          {verdict.domain.registrar && <p>Registrar: {verdict.domain.registrar}</p>}
+          {verdict.domain.registrar && (
+            <DataRow label="Registrar" icon="neutral">{verdict.domain.registrar}</DataRow>
+          )}
           {verdict.domain.createdAt && (
-            <p>Registered: {new Date(verdict.domain.createdAt).toLocaleDateString()}</p>
+            <DataRow label="Registered" icon="neutral">{new Date(verdict.domain.createdAt).toLocaleDateString()}</DataRow>
           )}
-        </div>
+        </VerdictSection>
       )}
 
+      {/* NARRATIVE FLAGS */}
       {verdict.narrativeFlags.length > 0 && (
-        <div className="border-t border-line pt-3">
-          <p className="text-xs text-ink-soft uppercase tracking-widest mb-2">Manipulation signals</p>
-          <div className="flex flex-wrap gap-1">
+        <VerdictSection label="Manipulation Signals">
+          <div className="flex flex-wrap gap-1.5">
             {verdict.narrativeFlags.map((flag, i) => (
-              <span key={i} className="text-xs px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-sm">
+              <span key={i} className="text-xs px-2 py-0.5 bg-[#8B2C2C]/5 text-[#8B2C2C] border border-[#8B2C2C]/20 rounded-sm font-medium">
                 {flag}
               </span>
             ))}
           </div>
-        </div>
+        </VerdictSection>
       )}
 
-      <div className="space-y-1 border-t border-line pt-3">
-        {verdict.findings.map((finding, i) => (
-          <div key={i} className="flex items-start gap-2 text-sm">
-            <span className={`w-4 shrink-0 font-mono ${DIRECTION_STYLES[finding.direction]}`}>
-              {DIRECTION_ICON[finding.direction]}
-            </span>
-            <span className="text-ink-soft">{finding.label}:</span>
-            <span className="text-ink">{finding.detail}</span>
-          </div>
-        ))}
-      </div>
+      {/* [5] SIGNALS / FINDINGS */}
+      {verdict.findings.length > 0 && (
+        <VerdictSection label="Findings">
+          {verdict.findings.map((f, i) => (
+            <SignalRow key={i} label={f.label} value={f.detail} direction={f.direction} />
+          ))}
+        </VerdictSection>
+      )}
 
-      <p className="text-xs text-ink-soft">Confidence: {verdict.confidence}</p>
+      {/* [6] CROSS-LINKS */}
+      <div className="flex flex-wrap gap-2 pt-2 border-t border-line">
+        {verdict.deployer && (
+          <a
+            href={`/wallet?address=${encodeURIComponent(verdict.deployer)}`}
+            className="text-xs border border-line px-3 py-1.5 text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm"
+          >
+            Investigate deployer wallet →
+          </a>
+        )}
+        {verdict.socials?.x && (
+          <a
+            href={`/x-account?handle=${encodeURIComponent(verdict.socials.x.replace(/^@/, ''))}`}
+            className="text-xs border border-line px-3 py-1.5 text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm"
+          >
+            Investigate X account →
+          </a>
+        )}
+      </div>
     </div>
   );
 }

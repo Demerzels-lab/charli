@@ -1,28 +1,8 @@
 // components/XVerdictCard.tsx
 'use client';
 
-import type { XAccountVerdict, DataSourceStatus, XDataSources } from '@/lib/types';
-
-const LEVEL_STYLES: Record<XAccountVerdict['level'], string> = {
-  LEGIT: 'text-green-700 bg-green-50 border-green-200',
-  DYOR: 'text-yellow-700 bg-yellow-50 border-yellow-200',
-  RED_FLAG: 'text-red-700 bg-red-50 border-red-200',
-  UNVERIFIABLE: 'text-ink-soft bg-surface border-line',
-};
-
-const LEVEL_LABEL: Record<XAccountVerdict['level'], string> = {
-  LEGIT: 'LEGIT',
-  DYOR: 'DYOR',
-  RED_FLAG: 'RED FLAG',
-  UNVERIFIABLE: 'UNVERIFIABLE',
-};
-
-const DIRECTION_STYLES = {
-  ok: 'text-green-600',
-  warn: 'text-yellow-600',
-  bad: 'text-red-600',
-};
-const DIRECTION_ICON = { ok: '✓', warn: '⚠', bad: '✗' };
+import type { XAccountVerdict, DataSourceStatus, XDataSources, AccountType } from '@/lib/types';
+import { VerdictSection, DataRow, VerdictBadge, ConfidencePill, SignalRow } from './verdict/VerdictPrimitives';
 
 const SOURCE_LABEL: Record<DataSourceStatus, string> = {
   available: 'live',
@@ -37,17 +17,29 @@ const SOURCE_DOT: Record<DataSourceStatus, string> = {
   no_data: 'bg-ink-soft/40',
 };
 
+const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
+  PROJECT_CRYPTO: 'Project / Token',
+  KOL_INFLUENCER: 'KOL / Influencer',
+  BRAND_OFFICIAL: 'Brand / Official',
+  PUBLIC_FIGURE: 'Public Figure',
+  PERSONAL_PRIVATE: 'Personal',
+  ADULT_CONTENT: 'Adult Content',
+  IMPERSONATOR: 'Impersonator',
+  UNKNOWN: 'Unknown',
+};
+
 type Props = { verdict: XAccountVerdict };
 
 export function XVerdictCard({ verdict }: Props) {
   const minimal = verdict.dataCompleteness === 'minimal';
   const sources: XDataSources = verdict.dataSources ?? { twitter: 'failed', memoryLol: 'no_data' };
+  const tc = verdict.tokenCrossCheck;
 
   return (
-    <div className="border border-line rounded-sm bg-surface p-6 space-y-4">
-      {/* header */}
+    <div className="border border-line rounded-sm bg-surface p-6 space-y-5 max-w-full">
+      {/* [1] HEADER — handle + account type + verdict badge */}
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="space-y-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-sm font-semibold text-ink">@{verdict.handle}</p>
             {verdict.isVerified && (
@@ -55,18 +47,22 @@ export function XVerdictCard({ verdict }: Props) {
             )}
           </div>
           {verdict.displayName && (
-            <p className="text-xs text-ink mt-0.5">{verdict.displayName}</p>
+            <p className="text-xs text-ink">{verdict.displayName}</p>
           )}
-          <p className="text-xs text-ink-soft uppercase tracking-widest mt-1">
-            X Account · {verdict.confidence}
+          <p className="text-xs text-ink-soft uppercase tracking-widest">
+            {ACCOUNT_TYPE_LABEL[verdict.accountType] ?? verdict.accountType}
           </p>
         </div>
-        <span className={`text-xs font-semibold px-2 py-1 border rounded-sm uppercase tracking-widest whitespace-nowrap ${LEVEL_STYLES[verdict.level]}`}>
-          {LEVEL_LABEL[verdict.level]}
-        </span>
+        <VerdictBadge level={verdict.level} />
       </div>
 
-      <p className="text-sm text-ink text-pretty">{verdict.summary}</p>
+      {/* [2] SUMMARY — di ATAS */}
+      <p className="text-sm text-ink text-pretty leading-relaxed">{verdict.summary}</p>
+
+      {/* [3] META */}
+      <div className="flex items-center gap-2">
+        <ConfidencePill level={verdict.confidence} />
+      </div>
 
       {/* minimal-data notice */}
       {minimal && (
@@ -76,58 +72,158 @@ export function XVerdictCard({ verdict }: Props) {
         </div>
       )}
 
-      {/* metrics */}
+      {/* ============================================ */}
+      {/* BAGIAN 1 — ACCOUNT INTELLIGENCE              */}
+      {/* ============================================ */}
+
       {!minimal && (
-        <div className="grid grid-cols-2 gap-2 text-xs tabular-nums text-ink-soft border-t border-line pt-3">
+        <VerdictSection label="Account Data">
           {verdict.metrics.accountAgeDays !== null && (
-            <span>Age: {verdict.metrics.accountAgeDays.toLocaleString()} days</span>
+            <DataRow label="Age" icon="neutral">
+              {verdict.metrics.accountAgeDays.toLocaleString()} days
+            </DataRow>
           )}
           {verdict.metrics.followers !== null && (
-            <span>Followers: {verdict.metrics.followers.toLocaleString()}</span>
+            <DataRow label="Followers" icon="neutral">
+              {verdict.metrics.followers.toLocaleString()}
+              {verdict.metrics.followerGrowthRate !== null && (
+                <span className="text-ink-soft font-normal ml-1">(~{verdict.metrics.followerGrowthRate}/day)</span>
+              )}
+            </DataRow>
           )}
           {verdict.metrics.following !== null && (
-            <span>Following: {verdict.metrics.following.toLocaleString()}</span>
+            <DataRow label="Following" icon="neutral">{verdict.metrics.following.toLocaleString()}</DataRow>
+          )}
+          {verdict.metrics.verification && (
+            <DataRow label="Verification" icon="neutral">{verdict.metrics.verification}</DataRow>
           )}
           {verdict.metrics.usernameChanges !== null && (
-            <span className={verdict.metrics.usernameChanges > 3 ? 'text-red-600 font-medium' : ''}>
-              Username changes: {verdict.metrics.usernameChanges}
-            </span>
+            <DataRow
+              label="Handle changes"
+              icon={verdict.metrics.usernameChanges > 3 ? 'bad' : verdict.metrics.usernameChanges > 0 ? 'warn' : 'ok'}
+            >
+              {verdict.metrics.usernameChanges}
+            </DataRow>
           )}
-        </div>
+        </VerdictSection>
       )}
 
-      {/* red flags */}
+      {/* IMPERSONATION CHECKS */}
+      {verdict.impersonationSignals && (
+        <VerdictSection label="Impersonation Checks">
+          <DataRow
+            label="Name match"
+            icon={verdict.impersonationSignals.nameMatchesKnownEntity ? 'bad' : 'ok'}
+          >
+            {verdict.impersonationSignals.nameMatchesKnownEntity
+              ? 'Matches known entity — needs verification'
+              : 'No known entity match'}
+          </DataRow>
+          {verdict.impersonationSignals.caMismatch !== null && (
+            <DataRow label="CA cross-check" icon={verdict.impersonationSignals.caMismatch ? 'bad' : 'ok'}>
+              {verdict.impersonationSignals.caMismatch ? 'MISMATCH — CA does not acknowledge this account' : 'Matches'}
+            </DataRow>
+          )}
+          <DataRow
+            label="Visual mimicry"
+            icon={verdict.impersonationSignals.visualMimicry ? 'bad' : 'neutral'}
+          >
+            {verdict.impersonationSignals.visualMimicry ? 'Detected — similar to known account' : 'None detected'}
+          </DataRow>
+        </VerdictSection>
+      )}
+
+      {/* RED FLAGS */}
       {verdict.redFlags.length > 0 && (
-        <div className="border-t border-line pt-3">
-          <p className="text-xs text-ink-soft uppercase tracking-widest mb-2">Red flags</p>
-          <div className="flex flex-wrap gap-1">
+        <VerdictSection label="Red Flags">
+          <div className="flex flex-wrap gap-1.5">
             {verdict.redFlags.map((flag, i) => (
-              <span key={i} className="text-xs px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-sm">
+              <span key={i} className="text-xs px-2 py-0.5 bg-[#8B2C2C]/5 text-[#8B2C2C] border border-[#8B2C2C]/20 rounded-sm font-medium">
                 {flag}
               </span>
             ))}
           </div>
-        </div>
+        </VerdictSection>
       )}
 
-      {/* signals */}
+      {/* SIGNALS */}
       {verdict.signals.length > 0 && (
-        <div className="space-y-1 border-t border-line pt-3">
-          {verdict.signals.map((signal, i) => (
-            <div key={i} className="flex items-start gap-2 text-sm">
-              <span className={`w-4 shrink-0 font-mono ${DIRECTION_STYLES[signal.direction]}`}>
-                {DIRECTION_ICON[signal.direction]}
-              </span>
-              <span className="text-ink-soft">{signal.label}:</span>
-              <span className="text-ink">{signal.value}</span>
-            </div>
+        <VerdictSection label="Signals">
+          {verdict.signals.map((s, i) => (
+            <SignalRow key={i} label={s.label} value={s.value} direction={s.direction} />
           ))}
+        </VerdictSection>
+      )}
+
+      {/* ============================================ */}
+      {/* BAGIAN 2 — TOKEN CROSS-CHECK (jika ada CA)  */}
+      {/* ============================================ */}
+
+      {tc && (
+        <div className="border-t-2 border-line pt-4 space-y-4">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-gold">
+            Token Cross-Check — {tc.ticker ?? tc.tokenName ?? tc.ca}
+          </p>
+
+          <VerdictSection label="Token Identity">
+            <DataRow label="Contract" icon="neutral">
+              <span className="font-mono text-xs break-all">{tc.ca}</span>
+            </DataRow>
+            {tc.tokenName && <DataRow label="Token" icon="neutral">{tc.tokenName}</DataRow>}
+            {tc.ticker && <DataRow label="Ticker" icon="neutral">${tc.ticker}</DataRow>}
+            {tc.chain && <DataRow label="Chain" icon="neutral">{tc.chain}</DataRow>}
+          </VerdictSection>
+
+          <VerdictSection label="Cross-Check Results">
+            <DataRow
+              label="DexScreener"
+              icon={tc.dexscreenerMatch === 'MATCH' ? 'ok' : tc.dexscreenerMatch === 'MISMATCH' ? 'bad' : 'neutral'}
+            >
+              {tc.dexscreenerMatch}
+            </DataRow>
+            {tc.accountAgeConsistent !== null && (
+              <DataRow label="Age consistent" icon={tc.accountAgeConsistent ? 'ok' : 'warn'}>
+                {tc.accountAgeConsistent ? 'Account age is consistent with token launch' : 'Account age inconsistent with token'}
+              </DataRow>
+            )}
+          </VerdictSection>
+
+          {tc.riskScore !== null && (
+            <VerdictSection label="Token Risk">
+              <DataRow label="Risk score" icon={tc.riskScore > 65 ? 'bad' : tc.riskScore > 35 ? 'warn' : 'ok'}>
+                {tc.riskScore}/100
+              </DataRow>
+              {tc.tokenVerdict && (
+                <DataRow label="Token verdict" icon={tc.tokenVerdict === 'LIKELY_RUG' || tc.tokenVerdict === 'HIGH_RISK' ? 'bad' : tc.tokenVerdict === 'DYOR' ? 'warn' : 'ok'}>
+                  {tc.tokenVerdict.replace(/_/g, ' ')}
+                </DataRow>
+              )}
+            </VerdictSection>
+          )}
         </div>
       )}
 
-      {/* data sources */}
-      <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
-        <span className="text-xs text-ink-soft uppercase tracking-widest">Sources</span>
+      {/* CROSS-LINKS */}
+      <div className="flex flex-wrap gap-2 pt-2 border-t border-line">
+        {tc?.ca && (
+          <a
+            href={`/project?query=${encodeURIComponent(tc.ca)}`}
+            className="text-xs border border-line px-3 py-1.5 text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm"
+          >
+            Investigate token →
+          </a>
+        )}
+        <a
+          href={`/wallet?address=${encodeURIComponent(verdict.handle)}`}
+          className="text-xs border border-line px-3 py-1.5 text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm"
+        >
+          Check linked wallet →
+        </a>
+      </div>
+
+      {/* DATA SOURCES */}
+      <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-line">
+        <span className="text-[11px] text-ink-soft uppercase tracking-[0.16em] font-bold text-gold">Sources</span>
         <span className="inline-flex items-center gap-1.5 text-xs text-ink-soft">
           <span className={`size-1.5 rounded-full ${SOURCE_DOT[sources.twitter]}`} />
           Twitter: {SOURCE_LABEL[sources.twitter]}

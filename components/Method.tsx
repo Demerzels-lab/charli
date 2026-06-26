@@ -43,7 +43,7 @@ export function Method() {
           <div className="mb-12 md:mb-16">
             <p className="eyebrow mb-3">Under the hood</p>
             <h2 className="max-w-[22ch] text-balance text-[clamp(1.8rem,4.5vw,3rem)] font-bold uppercase leading-[1.02] tracking-[-0.01em]">
-              How Claude actually runs the recon
+              The OSINT pipeline. Five steps, one verdict.
             </h2>
             <p className="mt-5 max-w-xl text-pretty leading-relaxed text-ink-soft">
               CARLI is an agent, not a wrapper. Each investigation is a chain of

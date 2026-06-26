@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { ApiResponse, ProjectVerdict } from '@/lib/types';
 import { ProjectVerdictCard } from '@/components/ProjectVerdictCard';
 import { RateLimitBanner } from '@/components/RateLimitBanner';
+import { InvestigationLoader } from '@/components/InvestigationLoader';
 
 export default function ProjectPage() {
   const [query, setQuery] = useState('');
@@ -58,10 +59,11 @@ export default function ProjectPage() {
             disabled={loading || !query.trim()}
             className="w-full bg-ink text-bg text-sm font-semibold py-2 rounded-sm disabled:opacity-40 transition-opacity"
           >
-            {loading ? 'Investigating…' : 'Investigate'}
+            {loading ? 'Investigating…' : 'Run Investigation'}
           </button>
         </form>
 
+        {loading && <InvestigationLoader type="project" />}
         {result && (
           <div className="space-y-3">
             {result.ok ? (

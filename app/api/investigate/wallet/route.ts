@@ -5,7 +5,6 @@ import { getCache, setCache } from '@/lib/cache';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { callLLM } from '@/lib/openrouter';
 import { detectChain } from '@/lib/data/chain-detect';
-import { fetchSolscanWallet } from '@/lib/data/solscan';
 import { fetchHeliusWallet } from '@/lib/data/helius';
 import { fetchEtherscanWallet } from '@/lib/data/etherscan';
 import { fetchDuneWalletActivity } from '@/lib/data/dune';
@@ -66,20 +65,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     } satisfies ApiResponse<WalletVerdict>);
   }
 
-  const [solscan, helius, etherscan, dune] = await Promise.all([
-    chain === 'solana' ? fetchSolscanWallet(address) : Promise.resolve({ balanceSol: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null, tokenCount: null }),
-    chain === 'solana' ? fetchHeliusWallet(address) : Promise.resolve({ balanceUsd: null, firstTxTime: null, lastTxTime: null }),
-    chain === 'evm' ? fetchEtherscanWallet(address) : Promise.resolve({ balanceWei: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null }),
+  // Primary data: Helius (Solana), Etherscan (EVM). Dune = enrichment only.
+  const [helius, etherscan, dune] = await Promise.all([
+    chain === 'solana' ? fetchHeliusWallet(address) : Promise.resolve({ balanceSol: null, balanceUsd: null, tokenHoldings: null, firstTxTime: null, lastTxTime: null, txCount: null, fundedBy: null, fundedDaysAgo: null }),
+    chain === 'evm' ? fetchEtherscanWallet(address) : Promise.resolve({ balanceWei: null, balanceUsd: null, firstTxTime: null, lastTxTime: null, txCount: null, fundedBy: null, fundedDaysAgo: null, erc20Tokens: null }),
     fetchDuneWalletActivity(address),
   ]);
 
   // Detect data completeness — all null means no API keys configured.
   const hasOnChainData = chain === 'solana'
-    ? (solscan.balanceSol !== null || solscan.tokenCount !== null || solscan.lastTxTime !== null || helius.firstTxTime !== null || helius.lastTxTime !== null)
+    ? (helius.balanceSol !== null || helius.lastTxTime !== null || helius.firstTxTime !== null)
     : (etherscan.balanceWei !== null || etherscan.txCount !== null);
-  const hasDuneData = dune.tradeCount !== null || dune.totalProfitUsd !== null;
-  const dataMinimal = !hasOnChainData && !hasDuneData;
-
+  const dataMinimal = !hasOnChainData;
   let verdict: WalletVerdict;
 
   if (dataMinimal) {
@@ -95,12 +92,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       lastActive: null,
       linkedProjects: [],
       signals: [
-        { label: 'Data sources', value: 'No blockchain API keys configured (Solscan/Helius/Etherscan/Dune)', direction: 'warn' },
+        { label: 'Data sources', value: 'No blockchain API keys configured (Helius/Etherscan)', direction: 'warn' },
         { label: 'Address format', value: `Valid ${chain} address`, direction: 'ok' },
       ],
     };
   } else {
-    const evidence = buildWalletEvidence(address, chain, solscan, helius, etherscan, dune);
+    const evidence = buildWalletEvidence(address, chain, helius, etherscan, dune);
     try {
       const raw = await callLLM(WALLET_SYSTEM_PROMPT, evidence);
       const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();

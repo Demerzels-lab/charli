@@ -10,7 +10,7 @@ export default function AgentPage() {
             Paste a wallet, project, or X handle. CARLI investigates and synthesizes.
           </p>
         </div>
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden">
           <AgentChat />
         </div>
         <p className="shrink-0 border-t border-line pt-4 text-xs text-ink-soft">

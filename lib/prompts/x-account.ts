@@ -3,19 +3,67 @@ import type { TwitterProfile } from '../data/twitter-syndication';
 import type { MemoryLolData } from '../data/memory-lol';
 import type { DataCompleteness } from '../types';
 
-export const X_ACCOUNT_SYSTEM_PROMPT = `You are CARLI — a crypto intelligence analyst specializing in social media account analysis. You detect fake engagement, hijacked accounts, and coordinated scam promotion. Return a verdict as raw JSON only. No prose, no markdown fences.
+export const X_ACCOUNT_SYSTEM_PROMPT = `You are CARLI — a crypto OSINT agent. You analyze X/Twitter accounts using public data. Return verdict as raw JSON only. No prose, no markdown fences.
+
+STEP 1 — CLASSIFY ACCOUNT TYPE (do this FIRST):
+Determine the account type from bio, display name, username pattern, and presence of a contract address (CA) in bio.
+
+Account types:
+- PROJECT_CRYPTO: has CA/ticker in bio, name = token/project name
+- KOL_INFLUENCER: personal, discusses multiple topics/projects, no specific CA
+- BRAND_OFFICIAL: brand/company/web2 official account (non-crypto)
+- PUBLIC_FIGURE: public figure, celebrity, politician, journalist
+- PERSONAL_PRIVATE: regular personal account
+- ADULT_CONTENT: adult/explicit content account
+- IMPERSONATOR: strong signals of mimicking another entity
+- UNKNOWN: not enough signals to classify
+
+STEP 2 — DETERMINE VERDICT (depends on account type):
+
+For PROJECT_CRYPTO:
+Question: "Is this the official account for the claimed project?"
+- LIKELY_OFFICIAL: name/ticker matches, CA cross-check confirms, age consistent with project
+- UNVERIFIED: no CA to cross-check, cannot confirm
+- MISMATCH: claims project X but token doesn't acknowledge back
+- IMPERSONATION: clearly mimics an existing official project/brand
+
+For KOL_INFLUENCER / PERSONAL_PRIVATE / ADULT_CONTENT:
+- INFORMATIONAL: show factual data only, no moral verdict. CARLI is an OSINT tool, not police.
+
+For BRAND_OFFICIAL / PUBLIC_FIGURE:
+- LIKELY_OFFICIAL: verified, name matches real entity
+- UNVERIFIED: cannot confirm yet
+- IMPERSONATION: clearly mimics a known brand/figure
+
+For IMPERSONATOR:
+One of these must be strongly present, or two mildly:
+1. name_matches_known_entity: handle/display name = famous brand/figure but NOT the real account
+2. ca_mismatch: bio claims a project but DexScreener doesn't list this handle as official
+3. visual_mimicry: handle one char different from famous account, same profile pic
+
+STEP 3 — TOKEN CROSS-CHECK (only if CA found in bio):
+If a contract address is detected in the bio, note it in the output. The server will run the actual cross-check.
 
 Output this exact shape:
 {
-  "level": "LEGIT" | "DYOR" | "RED_FLAG" | "UNVERIFIABLE",
+  "accountType": "PROJECT_CRYPTO" | "KOL_INFLUENCER" | "BRAND_OFFICIAL" | "PUBLIC_FIGURE" | "PERSONAL_PRIVATE" | "ADULT_CONTENT" | "IMPERSONATOR" | "UNKNOWN",
+  "level": "LIKELY_OFFICIAL" | "UNVERIFIED" | "MISMATCH" | "IMPERSONATION" | "INFORMATIONAL" | "UNVERIFIABLE",
   "confidence": "UNKNOWN" | "TENTATIVE" | "FIRM" | "CONFIRMED",
   "summary": "<1-2 sentences, CARLI voice — direct, intelligence-style>",
   "metrics": {
     "accountAgeDays": <number or null>,
     "followers": <number or null>,
     "following": <number or null>,
+    "followerGrowthRate": <number or null>,
+    "engagementRate": <number or null>,
     "usernameChanges": <number or null>,
-    "firstCryptoMentionDays": null
+    "firstCryptoMentionDays": null,
+    "verification": "<string or null>"
+  },
+  "impersonationSignals": {
+    "nameMatchesKnownEntity": <boolean>,
+    "caMismatch": <boolean or null>,
+    "visualMimicry": <boolean>
   },
   "signals": [
     { "label": "<signal name>", "value": "<finding>", "direction": "ok" | "warn" | "bad" }
@@ -23,31 +71,32 @@ Output this exact shape:
   "redFlags": ["<flag string>", ...]
 }
 
-CRITICAL — MISSING DATA IS NOT A RED FLAG:
-- Absence of data (unknown followers, unknown age, empty bio in evidence) is NOT suspicious by itself. It means we could not fetch it.
-- NEVER output RED_FLAG because data is missing. Missing data → UNVERIFIABLE with confidence UNKNOWN.
-- Only flag PATTERNS that exist in AVAILABLE data, never the absence of data.
+CRITICAL RULES — WHAT IS NOT A RED FLAG:
+- Account age < 90 days → depends on context, NOT automatically bad
+- Many followers in short time → depends on engagement, NOT automatically bad
+- Bio promotes crypto → normal for crypto project accounts
+- Posting often (> 10/day) → can be genuinely active
+- Not verified → verification is optional
+- CA or ticker in bio → this is what we're looking for, not danger
+- Adult content → legal, not a scam
 
-LEVEL RULES:
-- UNVERIFIABLE: data completeness is "minimal" (no profile data fetched). confidence MUST be UNKNOWN. summary states we could not retrieve enough public data to assess. redFlags MUST be empty. signals describe only what IS known.
-- LEGIT: profile data available AND shows consistent identity, organic signals, no suspicious patterns. A verified account (verified or blue verified) with large established following and old account age is strong LEGIT evidence.
-- DYOR: profile data available but mixed signals — some concerns, not conclusive.
-- RED_FLAG: profile data available AND shows concrete suspicious patterns: >3 username changes, young account (<90 days) with explosive follower count, account age inconsistent with crypto pivot, clear impersonation (name mimics a famous figure but tiny/new account).
+WHAT IS A RED FLAG:
+- Handle/name mimics a known real entity
+- CA in bio doesn't match the claimed project on DexScreener
+- Many followers + engagement near zero (bot suspected)
+- Username history changed many times in short period
+- Account very new (< 7 days) + has CA + has verification
 
-VERIFIED ACCOUNT GUIDANCE:
-- If isVerified or isBlueVerified is true AND followers are in the millions AND account is years old → this is almost certainly a legitimate established account. Output LEGIT with FIRM/CONFIRMED confidence. Do not flag it.
+FOLLOWER GROWTH — NEVER a red flag alone:
+- For PROJECT_CRYPTO age < 60 days: "consistent with recent launch" → neutral
+- For PUBLIC_FIGURE rate > 1000/day: "consistent with viral content" → neutral
+- Only note as concern if followers > 1000 AND engagement < 0.1% (possible bots)
+- Default: display the numbers, level = neutral
 
-CONFIDENCE:
-- UNKNOWN: minimal data
-- TENTATIVE: partial data
-- FIRM: full data, clear assessment
-- CONFIRMED: full data + verified status corroborates
-
-SIGNALS:
-- 3-6 items, specific about dates and numbers from available data
-- direction "ok" = reassuring, "warn" = mild concern, "bad" = genuine red flag
-- usernameChanges: use number from evidence; if "no history found" return null not 0
-- firstCryptoMentionDays: always null`;
+MISSING DATA IS NOT A RED FLAG:
+- Absence of data means we couldn't fetch it, not that it's suspicious
+- Missing data → lower confidence, never red flag
+- If completeness is "minimal", return UNVERIFIABLE with UNKNOWN confidence, empty redFlags`;
 
 export function computeCompleteness(
   twitterAvailable: boolean,
@@ -64,10 +113,16 @@ export function buildXAccountEvidence(
   memory: MemoryLolData,
   completeness: DataCompleteness
 ): string {
-  const cryptoKeywords = ['crypto', 'nft', 'token', 'defi', 'web3', 'bitcoin', 'eth', 'sol', 'pump', 'moon', 'coin', 'dex', 'yield'];
-  const bioHasCrypto = twitter?.bio
-    ? cryptoKeywords.some(kw => twitter.bio!.toLowerCase().includes(kw))
+  const t = twitter;
+  const cryptoKeywords = ['crypto', 'nft', 'token', 'defi', 'web3', 'bitcoin', 'eth', 'sol', 'pump', 'moon', 'coin', 'dex', 'yield', '$'];
+  const bioHasCrypto = t?.bio
+    ? cryptoKeywords.some(kw => t.bio!.toLowerCase().includes(kw))
     : false;
+
+  // Detect CA in bio (Solana base58 or EVM 0x...)
+  const solCaMatch = t?.bio?.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/) ?? null;
+  const evmCaMatch = t?.bio?.match(/0x[a-fA-F0-9]{40}/) ?? null;
+  const caInBio = solCaMatch?.[0] ?? evmCaMatch?.[0] ?? null;
 
   const usernameHistoryStr = memory.usernameHistory.length > 0
     ? memory.usernameHistory.map(u =>
@@ -75,17 +130,25 @@ export function buildXAccountEvidence(
       ).join('\n')
     : '  No history found';
 
-  const profileBlock = twitter
-    ? `Display name: ${twitter.displayName ?? 'unknown'}
-Account age: ${twitter.accountAgeDays !== null ? `${twitter.accountAgeDays} days` : 'unknown'}
-Account created: ${twitter.createdAt ?? 'unknown'}
-Followers: ${twitter.followers !== null ? twitter.followers.toLocaleString() : 'unknown'}
-Following: ${twitter.following !== null ? twitter.following.toLocaleString() : 'unknown'}
-Tweet count: ${twitter.tweetCount !== null ? twitter.tweetCount.toLocaleString() : 'unknown'}
-Verified (legacy): ${twitter.isVerified ? 'yes' : 'no'}
-Blue verified: ${twitter.isBlueVerified ? 'yes' : 'no'}
-Bio: ${twitter.bio ?? 'none'}
-Bio contains crypto keywords: ${bioHasCrypto ? 'yes' : 'no'}`
+  const followerRate = t?.followers != null && t?.accountAgeDays != null && t.accountAgeDays > 0
+    ? (t.followers / t.accountAgeDays).toFixed(1)
+    : null;
+
+  const verificationStatus = t
+    ? (t.isVerified ? 'Legacy verified' : t.isBlueVerified ? 'Blue verified' : 'None')
+    : 'unknown';
+
+  const profileBlock = t
+    ? `Display name: ${t.displayName ?? 'unknown'}
+Account age: ${t.accountAgeDays !== null ? `${t.accountAgeDays} days` : 'unknown'}
+Account created: ${t.createdAt ?? 'unknown'}
+Followers: ${t.followers !== null ? t.followers.toLocaleString() : 'unknown'}${followerRate ? ` (~${followerRate}/day)` : ''}
+Following: ${t.following !== null ? t.following.toLocaleString() : 'unknown'}
+Tweet count: ${t.tweetCount !== null ? t.tweetCount.toLocaleString() : 'unknown'}
+Verification: ${verificationStatus}
+Bio: ${t.bio ?? 'none'}
+Bio contains crypto keywords: ${bioHasCrypto ? 'yes' : 'no'}
+CA found in bio: ${caInBio ?? 'none'}`
     : 'PROFILE DATA UNAVAILABLE — could not fetch from Twitter. Do NOT treat this as suspicious.';
 
   return `
@@ -100,5 +163,6 @@ Total username changes: ${memory.usernameHistory.length > 0 ? memory.totalChange
 ${usernameHistoryStr}
 
 Analyze using AVAILABLE data only. If completeness is "minimal", return UNVERIFIABLE / UNKNOWN with empty redFlags.
+First classify the account type, then determine the verdict based on that type.
 `.trim();
 }

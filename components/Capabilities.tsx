@@ -12,36 +12,40 @@ import { AgentIcon } from "./icons/AgentIcon";
 const CAPABILITIES = [
   {
     no: "I",
+    label: "SOCIAL OSINT",
     name: "X Account Intel",
     inputs: "@handle",
-    body: "Account age against follower growth, engagement authenticity, posting behavior, and whether this account has any crypto history at all. Returns a clear read: legit, do your own research, or red flag.",
+    body: "Account age against follower growth, engagement authenticity, posting behavior, and whether this account has any crypto history at all. Classifies account type first, then verdict: official, unverified, mismatch, or impersonation.",
     status: "Live",
     Icon: XAccountIcon,
-    preview: ["verdict: LEGIT", "confidence: FIRM", "signals: 6 analyzed"],
+    preview: ["verdict: LIKELY OFFICIAL", "confidence: FIRM", "signals: 6 analyzed"],
   },
   {
     no: "II",
+    label: "ON-CHAIN OSINT",
     name: "Wallet Dossier",
     inputs: "Solana · EVM address",
-    body: "Behavior pulled from public chain data. Dev wallet, whale, or flipper. Past project participation and funding patterns. An interpretation layer on top of the explorer, not another raw feed.",
+    body: "Behavior pulled from public chain data via Helius and Etherscan. Dev wallet, whale, or flipper. Funding source, transaction history, and connected projects. An interpretation layer on top of the explorer, not another raw feed.",
     status: "Live",
     Icon: WalletIcon,
     preview: ["classification: whale", "confidence: CONFIRMED", "signals: 5 analyzed"],
   },
   {
     no: "III",
+    label: "TARGET PROFILING",
     name: "Project OSINT Report",
     inputs: "name · contract · domain",
-    body: "Domain age and registration, linked social accounts, team identity signals, and connected wallets, scored end to end: safe, DYOR, high risk, or likely rug. Built to be shared as a card.",
+    body: "Domain age and registration, linked social accounts, team identity signals, and connected wallets, scored end to end: safe, DYOR, high risk, or likely rug. Narrative analysis detects manipulation patterns. Built to be shared as a card.",
     status: "Live",
     Icon: ProjectIcon,
     preview: ["verdict: HIGH_RISK", "risk score: 65/100", "findings: 7 analyzed"],
   },
   {
     no: "IV",
+    label: "FREE INVESTIGATION",
     name: "Agent Mode",
     inputs: "free-form chat",
-    body: "Talk to CARLI directly. “Check this account before I buy.” It runs the full investigation conversationally and synthesizes one answer instead of handing you ten dashboards.",
+    body: "Talk to CARLI directly. \"Check this account before I buy.\" It runs the full investigation conversationally and synthesizes one answer instead of handing you ten dashboards.",
     status: "Live",
     Icon: AgentIcon,
     preview: ["mode: conversational", "tools: 3 available", "synthesis: one answer"],
@@ -83,6 +87,9 @@ export function Capabilities() {
                     {c.no}
                   </span>
                   <div>
+                    {'label' in c && (
+                      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-gold">[ {c.label} ]</span>
+                    )}
                     <h3 className="text-lg font-bold text-ink md:text-xl">
                       {c.name}
                     </h3>

@@ -91,16 +91,35 @@ export type ProjectVerdict = {
   findings: ProjectFinding[];
 };
 
-// --- X Account types ---
+// --- X Account types (redesigned per X ACCOUNT BRIEF) ---
 
-export type XAccountLevel = 'LEGIT' | 'DYOR' | 'RED_FLAG' | 'UNVERIFIABLE';
+export type AccountType =
+  | 'PROJECT_CRYPTO'
+  | 'KOL_INFLUENCER'
+  | 'BRAND_OFFICIAL'
+  | 'PUBLIC_FIGURE'
+  | 'PERSONAL_PRIVATE'
+  | 'ADULT_CONTENT'
+  | 'IMPERSONATOR'
+  | 'UNKNOWN';
+
+export type XAccountLevel =
+  | 'LIKELY_OFFICIAL'
+  | 'UNVERIFIED'
+  | 'MISMATCH'
+  | 'IMPERSONATION'
+  | 'INFORMATIONAL'
+  | 'UNVERIFIABLE';
 
 export type XMetrics = {
   accountAgeDays: number | null;
   followers: number | null;
   following: number | null;
+  followerGrowthRate: number | null;
+  engagementRate: number | null;
   usernameChanges: number | null;
   firstCryptoMentionDays: number | null;
+  verification: string | null;
 };
 
 export type DataSourceStatus = 'available' | 'not_found' | 'failed' | 'no_data';
@@ -112,14 +131,34 @@ export type XDataSources = {
 
 export type DataCompleteness = 'full' | 'partial' | 'minimal';
 
+export type ImpersonationSignals = {
+  nameMatchesKnownEntity: boolean;
+  caMismatch: boolean | null;
+  visualMimicry: boolean;
+};
+
+export type TokenCrossCheck = {
+  ca: string;
+  tokenName: string | null;
+  ticker: string | null;
+  chain: string | null;
+  dexscreenerMatch: 'MATCH' | 'MISMATCH' | 'NOT_LISTED';
+  accountAgeConsistent: boolean | null;
+  riskScore: number | null;
+  tokenVerdict: ProjectLevel | null;
+} | null;
+
 export type XAccountVerdict = {
   handle: string;
   displayName: string | null;
+  isVerified: boolean;
+  accountType: AccountType;
   level: XAccountLevel;
   confidence: Confidence;
   summary: string;
-  isVerified: boolean;
   metrics: XMetrics;
+  impersonationSignals: ImpersonationSignals;
+  tokenCrossCheck: TokenCrossCheck;
   signals: Signal[];
   redFlags: string[];
   dataSources: XDataSources;

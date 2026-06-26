@@ -73,12 +73,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const evidence = buildXAccountEvidence(handle, twitterResult.data, memory, completeness);
 
   // Base fields filled from real fetched data (LLM can't override these facts).
+  const ageDays = twitterResult.data?.accountAgeDays ?? null;
+  const followers = twitterResult.data?.followers ?? null;
+  const followerRate = followers !== null && ageDays !== null && ageDays > 0
+    ? Math.round((followers / ageDays) * 10) / 10
+    : null;
   const baseMetrics = {
-    accountAgeDays: twitterResult.data?.accountAgeDays ?? null,
-    followers: twitterResult.data?.followers ?? null,
+    accountAgeDays: ageDays,
+    followers,
     following: twitterResult.data?.following ?? null,
+    followerGrowthRate: followerRate,
+    engagementRate: null, // needs tweet-level data to compute properly
     usernameChanges: memoryAvailable ? memory.totalChanges : null,
     firstCryptoMentionDays: null,
+    verification: twitterResult.data?.isVerified ? 'Legacy' : twitterResult.data?.isBlueVerified ? 'Blue' : null,
   };
   const displayName = twitterResult.data?.displayName ?? null;
   const isVerified = (twitterResult.data?.isVerified || twitterResult.data?.isBlueVerified) ?? false;
@@ -99,7 +107,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       dataCompleteness: completeness,
     };
 
-    // Safeguard: minimal data can never be a RED_FLAG.
+    // Safeguard: minimal data → always UNVERIFIABLE
     if (completeness === 'minimal') {
       verdict.level = 'UNVERIFIABLE';
       verdict.confidence = 'UNKNOWN';
@@ -107,18 +115,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
   } catch (err) {
     console.error('[x-account route] LLM parse error:', (err as Error).message);
-    // Graceful fallback verdict instead of 500.
     verdict = {
       handle,
       displayName,
       isVerified,
-      level: completeness === 'minimal' ? 'UNVERIFIABLE' : 'DYOR',
+      accountType: 'UNKNOWN',
+      level: completeness === 'minimal' ? 'UNVERIFIABLE' : 'UNVERIFIED',
       confidence: 'UNKNOWN',
       summary:
         completeness === 'minimal'
           ? 'Could not retrieve enough public data to assess this account.'
           : 'Analysis engine unavailable. Showing raw fetched data only.',
       metrics: baseMetrics,
+      impersonationSignals: { nameMatchesKnownEntity: false, caMismatch: null, visualMimicry: false },
+      tokenCrossCheck: null,
       signals: [],
       redFlags: [],
       dataSources,

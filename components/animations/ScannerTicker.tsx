@@ -10,11 +10,11 @@ const SIGNALS: Signal[] = [
   { label: "SCANNING", text: "@CryptoAlpha99", tone: "neutral" },
   { label: "FLAGGED", text: "wallet HiBn...9kRm", tone: "bad" },
   { label: "ANALYZING", text: "narrative moonbase.wtf", tone: "neutral" },
-  { label: "CONFIRMED", text: "rug pattern detected", tone: "bad" },
-  { label: "LEGIT", text: "@0xResearchDAO", tone: "good" },
+  { label: "LIKELY RUG", text: "rug pattern detected", tone: "bad" },
+  { label: "LIKELY OFFICIAL", text: "@0xResearchDAO", tone: "good" },
   { label: "HIGH RISK", text: "domain age: 2 days", tone: "bad" },
   { label: "RUNNING", text: "cross_reference signals", tone: "neutral" },
-  { label: "VERDICT", text: "RED_FLAG confirmed", tone: "bad" },
+  { label: "IMPERSONATION", text: "handle mimics @elonmusk", tone: "bad" },
 ];
 
 const TONE_CLASS: Record<Signal["tone"], string> = {

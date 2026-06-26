@@ -11,7 +11,7 @@ type Message = {
 export async function callLLM(
   systemPrompt: string,
   userContent: string,
-  timeoutMs = 30_000
+  timeoutMs = 30_000,
 ): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('Missing OPENROUTER_API_KEY');
