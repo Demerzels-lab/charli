@@ -65,9 +65,9 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
       <Canvas
         dpr={[1, 2]}
         camera={{ fov: 75, near: 0.1, far: 1000, position: [0, 0, 2] }}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%', height: '100%', background: 'transparent' }}
+        gl={{ antialias: true, alpha: true }}
       >
-        <color attach="background" args={['#0a0a0a']} />
         <Scene />
       </Canvas>
     </div>
