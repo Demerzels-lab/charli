@@ -161,7 +161,7 @@ CARLI is raising to:
 
 ## Links
 
-- **Live demo:** [carli.id](https://carli.id) *(coming soon)*
+- **Live demo:** [carli.id](https://www.carliosint.xyz/) *(coming soon)*
 - **Technical architecture:** See `DEV_BRIEF.md` in this repo
 - **Contact:** [caesar@carli.id](mailto:caesar@carli.id)
 
