@@ -22,8 +22,8 @@ function GLBModel() {
       const bbox = new THREE.Box3().setFromObject(groupRef.current);
       const size = bbox.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
-      if (maxDim > 0) {
-        const fov = camera.fov * (Math.PI / 180);
+      if (maxDim > 0 && 'fov' in camera) {
+        const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
         let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
         cameraZ *= 1.5;
         camera.position.z = cameraZ;
