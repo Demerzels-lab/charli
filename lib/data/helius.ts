@@ -118,8 +118,8 @@ export async function fetchHeliusWallet(address: string): Promise<HeliusWalletDa
 
     try {
       // Fetch oldest transactions — Helius doesn't support sort order directly,
-      // so we use the earliest available. For a full solution, paginate backwards.
-      const oldestTxs = await getTransactionsForAddress(address, key, 'asc', 1);
+      // so we fetch many and sort ascending to get the earliest.
+      const oldestTxs = await getTransactionsForAddress(address, key, 'asc', 100);
       if (oldestTxs.length > 0 && oldestTxs[0].timestamp) {
         firstTxTime = new Date(oldestTxs[0].timestamp * 1000).toISOString();
         // Try to identify funder from first tx description
