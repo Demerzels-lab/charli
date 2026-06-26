@@ -49,10 +49,10 @@ function Scene() {
       <Suspense fallback={null}>
         <Model />
       </Suspense>
-      <ambientLight intensity={1.0} />
-      <pointLight position={[5, 8, 15]} intensity={1.5} />
-      <pointLight position={[-8, 3, 5]} intensity={1.0} color="#d4af37" />
-      <pointLight position={[0, -5, 5]} intensity={0.6} />
+      <ambientLight intensity={1.8} />
+      <pointLight position={[8, 12, 20]} intensity={2.0} />
+      <pointLight position={[-10, 6, 8]} intensity={1.5} color="#e8c547" />
+      <pointLight position={[2, -8, 10]} intensity={1.0} />
     </>
   );
 }
@@ -72,7 +72,7 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
         dpr={[1, 2]}
         camera={{ fov: 45, near: 0.1, far: 1000, position: [0, 0.2, 6] }}
         style={{ width: '100%', height: '100%', background: 'transparent' }}
-        gl={{ antialias: true, alpha: true, toneMappingExposure: 1.5 }}
+        gl={{ antialias: true, alpha: true, toneMappingExposure: 2.0 }}
       >
         <Scene />
       </Canvas>
