@@ -1,26 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import Image from 'next/image';
 import type { AgentMessage, WalletVerdict, ProjectVerdict, XAccountVerdict } from '@/lib/types';
 import { AgentToolBadge } from './AgentToolBadge';
 import { WalletVerdictCard } from './WalletVerdictCard';
 import { ProjectVerdictCard } from './ProjectVerdictCard';
 import { XVerdictCard } from './XVerdictCard';
-
-function CarliAvatar({ size = 32 }: { size?: number }) {
-  return (
-    <div className="shrink-0 relative" style={{ width: size, height: size }}>
-      <Image
-        src="/logo.png"
-        alt="CARLI"
-        fill
-        className="rounded-full border border-line bg-surface object-cover"
-        sizes={`${size}px`}
-      />
-    </div>
-  );
-}
+import { Carli3DAvatar } from './Carli3DAvatar';
 
 type ToolEvent = { name: string; status: 'running' | 'done' | 'failed' };
 type VerdictData = WalletVerdict | ProjectVerdict | XAccountVerdict;
@@ -152,7 +138,7 @@ export function AgentChat() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden space-y-5 py-4 pr-1">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-            <CarliAvatar size={64} />
+            <Carli3DAvatar size={64} />
             <div>
               <p className="text-sm font-semibold text-ink">CARLI is ready.</p>
               <p className="text-xs text-ink-soft mt-1 max-w-xs mx-auto">
@@ -186,7 +172,7 @@ export function AgentChat() {
               </div>
             ) : (
               <div className="flex gap-2.5 max-w-full">
-                <CarliAvatar />
+                <Carli3DAvatar size={32} />
                 <div className="space-y-2 flex-1 min-w-0 max-w-full">
                   <p className="text-xs font-semibold uppercase tracking-wider text-gold-dark">CARLI</p>
                   {msg.tools.length > 0 && (
