@@ -1,12 +1,14 @@
 'use client';
 
-import Image from 'next/image';
-
 export function Carli3DAvatar({ size = 64 }: { size?: number }) {
   return (
     <div
-      style={{ width: size, height: size }}
-      className="shrink-0"
+      style={{
+        width: size,
+        height: size,
+        animation: 'float-up-down 3s ease-in-out infinite',
+      }}
+      className="shrink-0 relative rounded-full border border-line bg-surface overflow-hidden"
     >
       <style>{`
         @keyframes float-up-down {
@@ -14,26 +16,19 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
             transform: translateY(0px);
           }
           50% {
-            transform: translateY(-10px);
+            transform: translateY(-12px);
           }
         }
-        .carli-floating {
-          animation: float-up-down 3s ease-in-out infinite !important;
-          display: inline-block !important;
-          width: 100% !important;
-          height: 100% !important;
-        }
       `}</style>
-      <div className="carli-floating relative w-full h-full">
-        <Image
-          src="/logo.png"
-          alt="CARLI"
-          fill
-          className="rounded-full border border-line bg-surface object-cover"
-          sizes={`${size}px`}
-          priority
-        />
-      </div>
+      <img
+        src="/logo.png"
+        alt="CARLI"
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+        }}
+      />
     </div>
   );
 }
