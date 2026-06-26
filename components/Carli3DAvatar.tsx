@@ -6,6 +6,8 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const modelRef = useRef<any>(null);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
+  const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isIdle, setIsIdle] = useState(true);
 
   useEffect(() => {
     // Load model-viewer from CDN
@@ -62,13 +64,21 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
         const targetZ = 0;
         modelRef.current.cameraTarget = `${targetX}m ${targetY}m ${targetZ}m`;
       }
+
+      resetIdleTimeout();
     };
 
     const handleMouseLeave = () => {
-      setRotation({ x: 0, y: 0 });
-      if (modelRef.current) {
-        modelRef.current.cameraTarget = '0m 0m 0m';
-      }
+      setIsIdle(true);
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+    };
+
+    const resetIdleTimeout = () => {
+      setIsIdle(false);
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+      idleTimeoutRef.current = setTimeout(() => {
+        setIsIdle(true);
+      }, 2000);
     };
 
     container.addEventListener('mousemove', handleMouseMove);
@@ -77,8 +87,34 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
     return () => {
       container.removeEventListener('mousemove', handleMouseMove);
       container.removeEventListener('mouseleave', handleMouseLeave);
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
     };
   }, []);
+
+  // Auto-pan camera when idle
+  useEffect(() => {
+    if (!isIdle || !modelRef.current) return;
+
+    let frameCount = 0;
+    const animate = () => {
+      frameCount++;
+      const angle = (frameCount * 0.5) % 360;
+      const rad = (angle * Math.PI) / 180;
+
+      const targetX = Math.sin(rad) * 0.25;
+      const targetY = Math.cos(rad * 0.5) * 0.15;
+      modelRef.current.cameraTarget = `${targetX}m ${targetY}m 0m`;
+
+      const rotY = Math.sin(rad) * 15;
+      const rotX = Math.cos(rad * 0.5) * 10;
+      setRotation({ x: rotX, y: rotY });
+
+      requestAnimationFrame(animate);
+    };
+
+    const id = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(id);
+  }, [isIdle]);
 
   return (
     <div
