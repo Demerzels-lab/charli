@@ -55,10 +55,12 @@ export function Navbar() {
             href="https://x.com/carliosint"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[13px] font-medium text-ink-soft transition-colors hover:text-ink"
+            className="flex items-center justify-center transition-colors text-ink-soft hover:text-ink"
             aria-label="CARLI on X"
           >
-            X
+            <svg className="size-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.6l-5.17-6.763-5.91 6.763h-3.308l7.727-8.835L.424 2.25h6.7l4.67 6.18 5.37-6.18zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
           </a>
           <a
             href="/agent"
