@@ -12,7 +12,7 @@ function Model() {
 
   useEffect(() => {
     if (groupRef.current) {
-      groupRef.current.scale.set(1.5, 1.5, 1.5);
+      groupRef.current.scale.set(2.5, 2.5, 2.5);
     }
   }, []);
 
@@ -49,9 +49,10 @@ function Scene() {
       <Suspense fallback={null}>
         <Model />
       </Suspense>
-      <ambientLight intensity={1.5} />
-      <pointLight position={[10, 10, 10]} intensity={1.2} />
-      <pointLight position={[-10, 5, 8]} intensity={0.8} color="#d4af37" />
+      <ambientLight intensity={1.0} />
+      <pointLight position={[5, 8, 15]} intensity={1.5} />
+      <pointLight position={[-8, 3, 5]} intensity={1.0} color="#d4af37" />
+      <pointLight position={[0, -5, 5]} intensity={0.6} />
     </>
   );
 }
@@ -69,9 +70,9 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
     <div style={{ width: size, height: size }}>
       <Canvas
         dpr={[1, 2]}
-        camera={{ fov: 50, near: 0.1, far: 1000, position: [0, 0, 3.5] }}
+        camera={{ fov: 45, near: 0.1, far: 1000, position: [0, 0.2, 6] }}
         style={{ width: '100%', height: '100%', background: 'transparent' }}
-        gl={{ antialias: true, alpha: true, toneMappingExposure: 1.3 }}
+        gl={{ antialias: true, alpha: true, toneMappingExposure: 1.5 }}
       >
         <Scene />
       </Canvas>
