@@ -2,13 +2,19 @@
 
 import { Suspense, useRef, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useGLTF, Bounds } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
 function Model() {
   const { scene } = useGLTF('/3d-logo.glb');
   const groupRef = useRef<THREE.Group>(null);
   const rotationRef = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.scale.set(1.5, 1.5, 1.5);
+    }
+  }, []);
 
   useFrame(({ clock, pointer }) => {
     if (!groupRef.current) return;
@@ -41,13 +47,11 @@ function Scene() {
   return (
     <>
       <Suspense fallback={null}>
-        <Bounds fit clip observe>
-          <Model />
-        </Bounds>
+        <Model />
       </Suspense>
-      <ambientLight intensity={1.2} />
-      <pointLight position={[10, 10, 10]} intensity={1.0} />
-      <pointLight position={[-10, 5, 8]} intensity={0.6} color="#d4af37" />
+      <ambientLight intensity={1.5} />
+      <pointLight position={[10, 10, 10]} intensity={1.2} />
+      <pointLight position={[-10, 5, 8]} intensity={0.8} color="#d4af37" />
     </>
   );
 }
@@ -65,9 +69,9 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
     <div style={{ width: size, height: size }}>
       <Canvas
         dpr={[1, 2]}
-        camera={{ fov: 75, near: 0.1, far: 1000, position: [0, 0, 2] }}
+        camera={{ fov: 50, near: 0.1, far: 1000, position: [0, 0, 3.5] }}
         style={{ width: '100%', height: '100%', background: 'transparent' }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ antialias: true, alpha: true, toneMappingExposure: 1.3 }}
       >
         <Scene />
       </Canvas>
