@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export function Carli3DAvatar({ size = 64 }: { size?: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const modelRef = useRef<any>(null);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -13,7 +14,16 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
     script.type = 'module';
     document.head.appendChild(script);
 
+    // Get model-viewer element after load
+    const timer = setTimeout(() => {
+      const model = containerRef.current?.querySelector('model-viewer');
+      if (model) {
+        modelRef.current = model;
+      }
+    }, 500);
+
     return () => {
+      clearTimeout(timer);
       if (script.parentNode) {
         script.parentNode.removeChild(script);
       }
@@ -32,14 +42,33 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
       const mouseX = e.clientX - centerX;
       const mouseY = e.clientY - centerY;
 
-      const rotationY = (mouseX / rect.width) * 20; // Max 20deg rotation
-      const rotationX = -(mouseY / rect.height) * 20;
+      // Normalize to -1 to 1 range
+      const normalizedX = mouseX / (rect.width / 2);
+      const normalizedY = mouseY / (rect.height / 2);
+
+      // Clamp to -1 to 1
+      const clampedX = Math.max(-1, Math.min(1, normalizedX));
+      const clampedY = Math.max(-1, Math.min(1, normalizedY));
+
+      const rotationY = clampedX * 25;
+      const rotationX = -clampedY * 25;
 
       setRotation({ x: rotationX, y: rotationY });
+
+      // Update camera target to make model "look" at cursor
+      if (modelRef.current) {
+        const targetX = clampedX * 0.3;
+        const targetY = -clampedY * 0.3;
+        const targetZ = 0;
+        modelRef.current.cameraTarget = `${targetX}m ${targetY}m ${targetZ}m`;
+      }
     };
 
     const handleMouseLeave = () => {
       setRotation({ x: 0, y: 0 });
+      if (modelRef.current) {
+        modelRef.current.cameraTarget = '0m 0m 0m';
+      }
     };
 
     container.addEventListener('mousemove', handleMouseMove);
@@ -77,7 +106,7 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
           display: block;
           width: 100%;
           height: 100%;
-          transition: transform 0.1s ease-out;
+          transition: transform 0.15s ease-out;
           transform-origin: center;
         }
       `}</style>
@@ -87,7 +116,7 @@ export function Carli3DAvatar({ size = 64 }: { size?: number }) {
           height: '100%',
           transformStyle: 'preserve-3d',
           transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
-          transition: 'transform 0.1s ease-out',
+          transition: 'transform 0.15s ease-out',
         }}
       >
         <model-viewer

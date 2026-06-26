@@ -43,7 +43,7 @@ export function Manifesto() {
         {/* right — animated avatar */}
         <div className="flex items-center justify-center md:col-span-5">
           <Reveal delay={0.12}>
-            <Carli3DAvatar size={280} />
+            <Carli3DAvatar size={450} />
           </Reveal>
         </div>
       </div>
