@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
-
-const Carli3DAvatar = dynamic(() => import("./Carli3DAvatar").then(m => m.Carli3DAvatar), { ssr: false });
+import Image from "next/image";
 
 const LINKS = [
   { label: "Problem", href: "#problem" },
@@ -37,7 +35,7 @@ export function Navbar() {
           className="flex items-center gap-2.5"
           aria-label="CARLI — home"
         >
-          <Carli3DAvatar size={40} />
+          <Image src="/logo.png" alt="CARLI" width={32} height={32} className="rounded-full" />
           <span className="text-[15px] font-extrabold uppercase tracking-[0.18em]">
             Carli
           </span>
