@@ -10,12 +10,15 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",
+    "@react-three/drei": "^9.88.0",
+    "@react-three/fiber": "^8.15.0",
     "@supabase/supabase-js": "^2.108.2",
     "motion": "^11.3.8",
     "next": "14.2.5",
     "node-html-parser": "^8.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "three": "^0.159.0",
     "whois-json": "^2.0.4"
   },
   "devDependencies": {
