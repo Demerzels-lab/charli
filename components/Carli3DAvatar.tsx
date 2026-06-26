@@ -45,8 +45,9 @@ function Scene() {
           <Model />
         </Bounds>
       </Suspense>
-      <ambientLight intensity={0.8} />
-      <pointLight position={[10, 10, 10]} intensity={0.6} />
+      <ambientLight intensity={1.2} />
+      <pointLight position={[10, 10, 10]} intensity={1.0} />
+      <pointLight position={[-10, 5, 8]} intensity={0.6} color="#d4af37" />
     </>
   );
 }
