@@ -1,7 +1,10 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import dynamic from "next/dynamic";
 import { Reveal } from "./Reveal";
+
+const Carli3DAvatar = dynamic(() => import("./Carli3DAvatar").then(m => m.Carli3DAvatar), { ssr: false });
 
 const LAYERS = [
   { label: "Bubble maps", sees: "the wallets", covered: true },
@@ -37,45 +40,10 @@ export function Manifesto() {
           </Reveal>
         </div>
 
-        {/* right — coverage diagram */}
-        <div className="flex items-center md:col-span-5">
+        {/* right — animated avatar */}
+        <div className="flex items-center justify-center md:col-span-5">
           <Reveal delay={0.12}>
-            <div className="w-full border border-line bg-bg p-5">
-              <div className="flex items-center justify-between border-b border-line pb-2.5">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft">
-                  Signal
-                </span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft">
-                  Who reads it
-                </span>
-              </div>
-              <div className="divide-y divide-line">
-                {LAYERS.map((l, i) => (
-                  <motion.div
-                    key={l.label}
-                    initial={reduce ? { opacity: 1 } : { opacity: 0, y: 8 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.35, delay: i * 0.1 }}
-                    className="flex items-center justify-between gap-3 py-3"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className={`size-1.5 shrink-0 rounded-full ${l.covered ? "bg-ink-soft/40" : "bg-gold"}`}
-                      />
-                      <span className={`text-xs ${l.covered ? "text-ink-soft" : "font-semibold text-ink"}`}>
-                        {l.label}
-                      </span>
-                    </div>
-                    <span
-                      className={`shrink-0 text-[11px] font-medium ${l.covered ? "text-ink-soft" : "text-gold-dark"}`}
-                    >
-                      {l.covered ? "existing tools" : "only CARLI"}
-                    </span>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+            <Carli3DAvatar size={200} />
           </Reveal>
         </div>
       </div>
