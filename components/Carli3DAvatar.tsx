@@ -1,181 +1,75 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useRef, useEffect, useState } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useGLTF, Bounds } from '@react-three/drei';
+import * as THREE from 'three';
 
-export function Carli3DAvatar({ size = 64 }: { size?: number }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const modelRef = useRef<any>(null);
-  const [rotation, setRotation] = useState({ x: 0, y: 0 });
-  const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [isIdle, setIsIdle] = useState(true);
+function Model() {
+  const { scene } = useGLTF('/3d-logo.glb');
+  const groupRef = useRef<THREE.Group>(null);
+  const rotationRef = useRef({ x: 0, y: 0 });
 
-  useEffect(() => {
-    // Load model-viewer from CDN
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js';
-    script.type = 'module';
-    document.head.appendChild(script);
+  useFrame(({ clock, pointer }) => {
+    if (!groupRef.current) return;
 
-    // Get model-viewer element after load
-    const timer = setTimeout(() => {
-      const model = containerRef.current?.querySelector('model-viewer');
-      if (model) {
-        modelRef.current = model;
-      }
-    }, 500);
+    const t = clock.elapsedTime;
 
-    return () => {
-      clearTimeout(timer);
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    };
-  }, []);
+    // Float naik-turun (sinus)
+    groupRef.current.position.y = Math.sin(t * 0.8) * 0.12;
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    // Target rotasi dari kursor + idle drift
+    const targetY = pointer.x * 0.5 + Math.sin(t * 0.25) * 0.08;
+    const targetX = -pointer.y * 0.28;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = container.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
+    // Lerp smoothing (6% per frame = smooth)
+    rotationRef.current.y = THREE.MathUtils.lerp(rotationRef.current.y, targetY, 0.06);
+    rotationRef.current.x = THREE.MathUtils.lerp(rotationRef.current.x, targetX, 0.06);
 
-      const mouseX = e.clientX - centerX;
-      const mouseY = e.clientY - centerY;
-
-      // Normalize to -1 to 1 range
-      const normalizedX = mouseX / (rect.width / 2);
-      const normalizedY = mouseY / (rect.height / 2);
-
-      // Clamp to -1 to 1
-      const clampedX = Math.max(-1, Math.min(1, normalizedX));
-      const clampedY = Math.max(-1, Math.min(1, normalizedY));
-
-      const rotationY = clampedX * 25;
-      const rotationX = -clampedY * 25;
-
-      setRotation({ x: rotationX, y: rotationY });
-
-      // Update camera target to make model "look" at cursor
-      if (modelRef.current) {
-        const targetX = clampedX * 0.3;
-        const targetY = -clampedY * 0.3;
-        const targetZ = 0;
-        modelRef.current.cameraTarget = `${targetX}m ${targetY}m ${targetZ}m`;
-      }
-
-      resetIdleTimeout();
-    };
-
-    const handleMouseLeave = () => {
-      setIsIdle(true);
-      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
-    };
-
-    const resetIdleTimeout = () => {
-      setIsIdle(false);
-      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
-      idleTimeoutRef.current = setTimeout(() => {
-        setIsIdle(true);
-      }, 2000);
-    };
-
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('mouseleave', handleMouseLeave);
-      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
-    };
-  }, []);
-
-  // Auto-pan camera when idle
-  useEffect(() => {
-    if (!isIdle || !modelRef.current) return;
-
-    let frameCount = 0;
-    const animate = () => {
-      frameCount++;
-      const angle = (frameCount * 0.5) % 360;
-      const rad = (angle * Math.PI) / 180;
-
-      const targetX = Math.sin(rad) * 0.25;
-      const targetY = Math.cos(rad * 0.5) * 0.15;
-      modelRef.current.cameraTarget = `${targetX}m ${targetY}m 0m`;
-
-      const rotY = Math.sin(rad) * 15;
-      const rotX = Math.cos(rad * 0.5) * 10;
-      setRotation({ x: rotX, y: rotY });
-
-      requestAnimationFrame(animate);
-    };
-
-    const id = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(id);
-  }, [isIdle]);
+    groupRef.current.rotation.y = rotationRef.current.y;
+    groupRef.current.rotation.x = rotationRef.current.x;
+  });
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '9999px',
-        overflow: 'hidden',
-        perspective: '1200px',
-        cursor: 'grab',
-      }}
-    >
-      <style>{`
-        @keyframes float-up-down {
-          0%, 100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-${Math.max(5, size * 0.1)}px);
-          }
-        }
-        .carli-3d-avatar {
-          animation: float-up-down 3s ease-in-out infinite;
-          display: block;
-          width: 100%;
-          height: 100%;
-          transition: transform 0.15s ease-out;
-          transform-origin: center;
-        }
-      `}</style>
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          transformStyle: 'preserve-3d',
-          transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
-          transition: 'transform 0.15s ease-out',
-        }}
-      >
-        <model-viewer
-          className="carli-3d-avatar"
-          src="/3d-logo.glb"
-          alt="CARLI 3D"
-          auto-rotate
-          camera-controls
-          touch-action="pan-y"
-          style={{
-            width: '100%',
-            height: '100%',
-          } as any}
-        />
-      </div>
-    </div>
+    <group ref={groupRef}>
+      <primitive object={scene.clone()} />
+    </group>
   );
 }
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'model-viewer': any;
-    }
-  }
+function Scene() {
+  return (
+    <>
+      <Suspense fallback={null}>
+        <Bounds fit clip observe>
+          <Model />
+        </Bounds>
+      </Suspense>
+      <ambientLight intensity={0.8} />
+      <pointLight position={[10, 10, 10]} intensity={0.6} />
+    </>
+  );
+}
+
+export function Carli3DAvatar({ size = 64 }: { size?: number }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return <div style={{ width: size, height: size }} />;
+
+  return (
+    <div style={{ width: size, height: size }}>
+      <Canvas
+        dpr={[1, 2]}
+        camera={{ fov: 75, near: 0.1, far: 1000, position: [0, 0, 2] }}
+        style={{ width: '100%', height: '100%' }}
+      >
+        <color attach="background" args={['#0a0a0a']} />
+        <Scene />
+      </Canvas>
+    </div>
+  );
 }
