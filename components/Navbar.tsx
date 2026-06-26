@@ -52,6 +52,15 @@ export function Navbar() {
             </a>
           ))}
           <a
+            href="https://x.com/carliosint"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] font-medium text-ink-soft transition-colors hover:text-ink"
+            aria-label="CARLI on X"
+          >
+            X
+          </a>
+          <a
             href="/agent"
             className="group inline-flex items-center gap-2 border border-ink bg-ink px-4 py-2 text-[13px] font-semibold uppercase tracking-wider text-bg transition-colors hover:bg-transparent hover:text-ink"
           >
