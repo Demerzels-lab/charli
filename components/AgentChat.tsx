@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import type { AgentMessage, WalletVerdict, ProjectVerdict, XAccountVerdict } from '@/lib/types';
 import { AgentToolBadge } from './AgentToolBadge';
 import { WalletVerdictCard } from './WalletVerdictCard';
 import { ProjectVerdictCard } from './ProjectVerdictCard';
 import { XVerdictCard } from './XVerdictCard';
-import { Carli3DAvatar } from './Carli3DAvatar';
+
+const Carli3DAvatar = dynamic(() => import('./Carli3DAvatar').then(m => m.Carli3DAvatar), { ssr: false });
 
 type ToolEvent = { name: string; status: 'running' | 'done' | 'failed' };
 type VerdictData = WalletVerdict | ProjectVerdict | XAccountVerdict;

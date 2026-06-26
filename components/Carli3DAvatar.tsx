@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useRef, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -51,28 +52,53 @@ function GLBScene() {
   );
 }
 
+function Canvas3D({ size = 64 }: { size?: number }) {
+  return (
+    <Canvas
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '9999px' }}
+      camera={{ fov: 75, near: 0.1, far: 1000, position: [0, 0, 2] }}
+    >
+      <color attach="background" args={['#0a0a0a']} />
+      <GLBScene />
+    </Canvas>
+  );
+}
+
 export function Carli3DAvatar({ size = 64 }: { size?: number }) {
   const [mounted, setMounted] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted) {
+  if (!mounted || useFallback) {
     return (
-      <div className="shrink-0 relative" style={{ width: size, height: size, background: '#1a1a1a', borderRadius: '9999px', border: '1px solid #333' }} />
+      <div className="shrink-0 relative" style={{ width: size, height: size }}>
+        <Image
+          src="/logo.png"
+          alt="CARLI"
+          fill
+          className="rounded-full border border-line bg-surface object-cover"
+          sizes={`${size}px`}
+        />
+      </div>
     );
   }
 
   return (
     <div className="shrink-0 relative" style={{ width: size, height: size }}>
-      <Canvas
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '9999px' }}
-        camera={{ fov: 75, near: 0.1, far: 1000, position: [0, 0, 2] }}
-      >
-        <color attach="background" args={['#0a0a0a']} />
-        <GLBScene />
-      </Canvas>
+      <Suspense fallback={
+        <Image
+          src="/logo.png"
+          alt="CARLI"
+          fill
+          className="rounded-full border border-line bg-surface object-cover"
+          sizes={`${size}px`}
+        />
+      }>
+        <Canvas3D size={size} />
+      </Suspense>
     </div>
   );
 }
