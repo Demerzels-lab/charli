@@ -88,20 +88,17 @@ export function Hero() {
 
         {/* token CA box */}
         <motion.div
-          className="mt-8 border border-line bg-surface-alt rounded p-4 max-w-md"
+          className="mt-8 border border-line rounded px-4 py-3 inline-flex items-center gap-4"
           initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(12px)" }}
           animate={{ opacity: 1, transform: "translateY(0px)" }}
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.95 }}
         >
-          <p className="text-xs uppercase tracking-wider text-ink-soft mb-2">$CARLI Token</p>
-          <div className="flex items-center gap-3">
-            <code className="text-sm font-mono text-ink break-all flex-1">
-              Cmr3ie84TCoc4iZG3w591FuueYx9zhFAe3X95DhEpump
-            </code>
-            <button className="shrink-0 px-3 py-1 text-xs uppercase tracking-wider border border-ink text-ink hover:bg-ink hover:text-bg transition-colors">
-              Copy
-            </button>
-          </div>
+          <code className="text-sm font-mono text-ink">
+            Cmr3ie84TCoc4iZG3w591FuueYx9zhFAe3X95DhEpump
+          </code>
+          <button className="shrink-0 px-4 py-2 text-xs uppercase tracking-wider border border-ink text-ink hover:bg-ink hover:text-bg transition-colors whitespace-nowrap font-semibold">
+            Copy
+          </button>
         </motion.div>
 
         <LiveDemo />
