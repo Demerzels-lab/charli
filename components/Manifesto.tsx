@@ -47,6 +47,44 @@ export function Manifesto() {
           </Reveal>
         </div>
       </div>
+
+      {/* Token section */}
+      <div className="shell mt-20 border-t border-line pt-20 md:mt-28 md:pt-28">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-12 md:gap-16">
+          <div className="md:col-span-7">
+            <Reveal>
+              <p className="eyebrow mb-8">The token</p>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <p className="max-w-[20ch] text-balance text-[clamp(1.9rem,5vw,3.6rem)] font-bold uppercase leading-[1.02] tracking-[-0.01em] text-ink">
+                Built by researchers, for researchers.
+              </p>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <p className="mt-8 max-w-lg text-pretty leading-relaxed text-ink-soft">
+                CARLI stays free, rate-limited per user. $CARLI aligns the people
+                who benefit from the tool with the tool itself. Every rug that
+                goes viral is a reason CARLI exists.
+              </p>
+            </Reveal>
+          </div>
+          <div className="flex items-center md:col-span-5">
+            <Reveal delay={0.12}>
+              <div className="border border-line bg-surface-alt rounded p-4">
+                <p className="text-xs uppercase tracking-wider text-ink-soft mb-3">Coming soon • $CARLI on pump.fun</p>
+                <div className="flex items-center gap-3">
+                  <code className="text-sm font-mono text-ink break-all">
+                    Cmr3ie84TCoc4iZG3w591FuueYx9zhFAe3X95DhEpump
+                  </code>
+                  <button className="shrink-0 px-3 py-1 text-xs uppercase tracking-wider border border-ink text-ink hover:bg-ink hover:text-bg transition-colors">
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
