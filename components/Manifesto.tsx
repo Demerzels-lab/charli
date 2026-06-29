@@ -70,16 +70,16 @@ export function Manifesto() {
           </div>
           <div className="flex items-center md:col-span-5">
             <Reveal delay={0.12}>
-              <div className="border border-line bg-surface-alt rounded p-4">
-                <p className="text-xs uppercase tracking-wider text-ink-soft mb-3">Coming soon • $CARLI on pump.fun</p>
-                <div className="flex items-center gap-3">
-                  <code className="text-sm font-mono text-ink break-all">
+              <div className="border border-line rounded px-4 py-3 inline-flex items-center gap-3">
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs uppercase tracking-wider text-ink-soft">Coming soon • $CARLI on pump.fun</p>
+                  <code className="text-xs font-mono text-ink-soft">
                     Cmr3ie84TCoc4iZG3w591FuueYx9zhFAe3X95DhEpump
                   </code>
-                  <button className="shrink-0 px-3 py-1 text-xs uppercase tracking-wider border border-ink text-ink hover:bg-ink hover:text-bg transition-colors">
-                    Copy
-                  </button>
                 </div>
+                <button className="shrink-0 px-3 py-1 text-xs uppercase tracking-wider border border-ink text-ink hover:bg-ink hover:text-bg transition-colors whitespace-nowrap">
+                  Copy
+                </button>
               </div>
             </Reveal>
           </div>
