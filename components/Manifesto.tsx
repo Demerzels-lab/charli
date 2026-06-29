@@ -72,10 +72,10 @@ export function Manifesto() {
             <Reveal delay={0.12}>
               <div className="border border-line rounded px-4 py-3 inline-flex items-center gap-3">
                 <div className="flex flex-col gap-1">
-                  <p className="text-xs uppercase tracking-wider text-ink-soft">Coming soon • $CARLI on pump.fun</p>
-                  <code className="text-xs font-mono text-ink-soft">
+                  <code className="text-sm font-mono text-ink">
                     Cmr3ie84TCoc4iZG3w591FuueYx9zhFAe3X95DhEpump
                   </code>
+                  <p className="text-xs text-ink-soft">$CARLI • pump.fun</p>
                 </div>
                 <button className="shrink-0 px-3 py-1 text-xs uppercase tracking-wider border border-ink text-ink hover:bg-ink hover:text-bg transition-colors whitespace-nowrap">
                   Copy
