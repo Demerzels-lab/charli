@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Reveal } from "./Reveal";
 import { AsciiPattern } from "./animations/AsciiPattern";
 
-const CA = "Coming soon · $CARLI on pump.fun";
+const CA = "Cmr3ie84TCoc4iZG3w591FuueYx9zhFAe3X95DhEpump";
 
 export function Closing() {
   const [copied, setCopied] = useState(false);
